@@ -127,7 +127,7 @@ export function liveHint(shot, sample) {
  * motion:  [{ t, rate }]  phone rotation speed in degrees per second
  * Returns { ok, title, fix, checks: [{ key, label, status: 'pass'|'fail'|'skip', note }] }
  */
-export function judgeTake({ shot, samples, motion, duration }) {
+export function judgeTake({ shot, samples, motion, duration, sideways = false }) {
   const checks = [];
   const add = (key, label, status, note, msg) => checks.push({ key, label, status, note, msg });
 
@@ -139,7 +139,9 @@ export function judgeTake({ shot, samples, motion, duration }) {
   // ---- Framing
   const faceChecked = samples.filter((s) => s.face != null);
   const faces = faceChecked.filter((s) => s.face.found).map((s) => s.face);
-  if (shot.frame === 'detail') {
+  if (sideways) {
+    add('framing', 'Framing', 'fail', 'Clip is sideways', 'This clip is sideways, film it with the phone upright so it fills a TikTok or Reel.');
+  } else if (shot.frame === 'detail') {
     add('framing', 'Framing', 'skip', 'Hands shot, no face needed');
   } else if (faceChecked.length < 2) {
     add('framing', 'Framing', 'skip', "Face checker wasn't ready, so framing wasn't checked");

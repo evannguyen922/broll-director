@@ -5,7 +5,7 @@
 // API key. The key is kept only in this phone's browser storage.
 
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.4.0/+esm';
-export const MODEL = 'claude-opus-5-5';
+export const MODEL = 'claude-sonnet-5-5';
 const KEY_STORE = 'broll.claudeKey';
 
 export function getKey() { try { return localStorage.getItem(KEY_STORE) || ''; } catch { return ''; } }

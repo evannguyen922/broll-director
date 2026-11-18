@@ -26,7 +26,7 @@ async function open(feed, init) {
 async function waitFaceReady(page) {
   await page.waitForFunction(() => {
     const h = document.querySelector('#hint');
-    return !h.hidden && !/Getting/.test(h.textContent);
+    return !h.hidden && !/Getting|Loading/.test(h.textContent);
   }, null, { timeout: 60000 });
   return page.textContent('#hint span');
 }
@@ -42,7 +42,7 @@ async function readReview(page) {
 
 // ---------- 1. Full walk-through ----------
 {
-  const { browser, page, errors } = await open('good', { fn: () => localStorage.setItem('broll.settings', JSON.stringify({ countdown: 3, voice: true })) });
+  const { browser, page, errors } = await open('good', { fn: () => localStorage.setItem('broll.settings', JSON.stringify({ voice: true })) });
   await page.waitForSelector('#home:not([hidden])');
   await page.screenshot({ path: `${OUT}01-home.png` });
   await page.fill('#topic', "student who's always tired tries a new sleep routine");
@@ -67,10 +67,14 @@ async function readReview(page) {
     console.log('   live hint before recording:', hint);
   }
   await page.screenshot({ path: `${OUT}03-film.png` });
+  const q = await page.evaluate(() => ({ chip: document.querySelector('#quality').textContent, w: document.querySelector('#video').videoWidth, h: document.querySelector('#video').videoHeight, s: window.brollDirector.state.stream.getVideoTracks()[0].getSettings() }));
+  ok('Camera quality is shown on the preview', q.chip.length > 0, `"${q.chip}" (${q.w} × ${q.h}, fake camera; asked for up to 4K/30)`);
+  ok('No countdown setting any more', await page.evaluate(() => !document.querySelector('#seg-countdown')));
   await page.click('#rec');
   await page.waitForSelector('#count:not([hidden])', { timeout: 30000 });
+  const firstCount = await page.textContent('#count');
   await page.screenshot({ path: `${OUT}04-countdown.png` });
-  ok('Voice + countdown runs (speech never blocks)', true);
+  ok('Countdown is 3-2-1 (after the direction is read)', firstCount === '3', `starts at ${firstCount}`);
   await page.waitForSelector('#rec-badge:not([hidden])', { timeout: 15000 });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${OUT}05-recording.png` });
@@ -108,7 +112,7 @@ async function readReview(page) {
   ok('Clip plays back from the phone storage', dur > 0, `duration ${dur}`);
   await page.screenshot({ path: `${OUT}08-player.png` });
   const fileNames = await page.evaluate(async () => {
-    const m = await import('/js/store.js');
+    const m = await import('./js/store.js');
     const p = window.brollDirector.state.project;
     const t = await m.listTakes(p.id);
     return t.map((x) => `${x.blob.type} ${(x.blob.size / 1024).toFixed(0)}KB`);
@@ -126,7 +130,7 @@ async function readReview(page) {
 
 // ---------- 2. Verdict scenarios on a waist-up shot ----------
 const project = { id: 'ptest', topic: 'test', shuffle: 0, shots: pick('s1', 's2', 's3', 'g1', 'g2', 'g3', 'w1', 'w2', 'w3') };
-const init = { fn: (p) => { localStorage.setItem('broll.project', JSON.stringify(p)); localStorage.setItem('broll.settings', JSON.stringify({ countdown: 3, voice: false })); }, arg: project };
+const init = { fn: (p) => { localStorage.setItem('broll.project', JSON.stringify(p)); localStorage.setItem('broll.settings', JSON.stringify({ voice: false })); }, arg: project };
 const scenarios = [
   { feed: 'good', expect: /Good shot, saved/, fixRe: /./, name: 'Well framed take is accepted' },
   { feed: 'tight', expect: /Do it again/, fixRe: /Too tight, no room above your head for text, step back/, name: 'Too tight / no headroom is caught' },
@@ -154,6 +158,71 @@ for (const sc of scenarios) {
   await browser.close();
 }
 
+// ---------- 2b. The framing message fits inside the preview on small iPhones ----------
+for (const vp of [{ width: 375, height: 667, name: 'iPhone SE' }, { width: 390, height: 844, name: 'iPhone 14' }]) {
+  const { browser, page } = await open('good', init);
+  await page.setViewportSize({ width: vp.width, height: vp.height });
+  await page.click('#resume-film');
+  await page.waitForFunction(() => document.querySelector('#video').videoWidth > 0, null, { timeout: 20000 });
+  const fit = await page.evaluate(() => {
+    const hint = document.querySelector('#hint');
+    hint.hidden = false; hint.querySelector('span').textContent = 'Loading framing check…';
+    const a = hint.getBoundingClientRect(), b = document.querySelector('#cam-frame').getBoundingClientRect();
+    const span = hint.querySelector('span');
+    return { inside: a.left >= b.left - 0.5 && a.right <= b.right + 0.5, notClipped: span.scrollWidth <= span.clientWidth + 1, hint: Math.round(a.width), frame: Math.round(b.width) };
+  });
+  await page.screenshot({ path: `${OUT}13-hint-${vp.width}.png` });
+  ok(`Framing message fits on ${vp.name}`, fit.inside && fit.notClipped, `message ${fit.hint}px wide in a ${fit.frame}px preview`);
+  const foot = await page.evaluate(() => { const r = document.querySelector('.film-foot').getBoundingClientRect(); return r.right <= innerWidth + 0.5 && document.querySelector('.film-foot').scrollWidth <= document.querySelector('.film-foot').clientWidth + 1; });
+  ok(`Bottom buttons fit on ${vp.name}`, foot);
+  await browser.close();
+}
+
+// ---------- 2c. Use a clip from my Photos ----------
+const clipCases = [
+  { file: 'clip-good', expect: /Good shot, saved/, fixRe: /./, name: 'Clip from Photos: good clip is accepted and saved' },
+  { file: 'clip-dark', expect: /Do it again/, fixRe: /Too dark/, name: 'Clip from Photos: dark clip is caught' },
+  { file: 'clip-short', expect: /Do it again/, fixRe: /Too short/, name: 'Clip from Photos: too-short clip is caught' },
+  { file: 'clip-sideways', expect: /Do it again/, fixRe: /sideways/, name: 'Clip from Photos: sideways clip is caught' },
+  { file: 'clip-4k', expect: /Good shot, saved/, fixRe: /./, name: 'Clip from Photos: 4K clip is checked and saved', quality: /4K \(2160 × 3840\)/ },
+];
+for (const cc of clipCases) {
+  const { browser, page, errors } = await open('good', init);
+  await page.click('#resume-film');
+  await page.waitForFunction(() => document.querySelector('#video').videoWidth > 0, null, { timeout: 20000 });
+  const path = `${FEEDS}${cc.file}.webm`;
+  const t0 = Date.now();
+  await page.setInputFiles('#photo-input', path);
+  await page.waitForSelector('#checking:not([hidden])', { timeout: 5000 }).catch(() => {});
+  const rv = await readReview(page);
+  const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  const rq = await page.textContent('#review-quality');
+  const pass = cc.expect.test(rv.title) && cc.fixRe.test(rv.fix) && (!cc.quality || cc.quality.test(rq));
+  ok(cc.name, pass, `${rv.title}: ${rv.fix} | ${rq} | checked in ${secs}s`);
+  if (!pass) console.log('     checks:', rv.checks.join(' ; '));
+  await page.screenshot({ path: `${OUT}14-${cc.file}.png` });
+  if (/Good shot/.test(rv.title)) {
+    // The saved file is the original, byte for byte.
+    const orig = fs.readFileSync(path);
+    const saved = await page.evaluate(async () => {
+      const m = await import('./js/store.js');
+      const t = (await m.listTakes(window.brollDirector.state.project.id)).at(-1);
+      const u = new Uint8Array(await t.blob.arrayBuffer());
+      let sum = 0; for (let i = 0; i < u.length; i += 997) sum = (sum + u[i] * (i % 251 + 1)) % 1e9;
+      return { size: u.length, sum, type: t.blob.type, name: t.originalName, source: t.source };
+    });
+    let sum = 0; for (let i = 0; i < orig.length; i += 997) sum = (sum + orig[i] * (i % 251 + 1)) % 1e9;
+    ok(`${cc.file}: saved file is the untouched original`, saved.size === orig.length && saved.sum === sum && saved.source === 'photos', `${(saved.size / 1e6).toFixed(1)} MB, ${saved.type}`);
+    await page.click('#rv-next');
+    await page.click('#film-clips');
+    await page.waitForSelector('.clip');
+    const fname = await page.evaluate(() => window.brollDirector.clipFiles().map((f) => f.name));
+    ok(`${cc.file}: saves with its own file type`, fname.every((n) => n.endsWith('.webm')), fname.join(', '));
+  }
+  if (errors.length) ok(`No page errors (${cc.file})`, false, errors.slice(0, 3).join(' | '));
+  await browser.close();
+}
+
 // ---------- 3. Claude coaching (Claude's server is stood in for; no real key) ----------
 const speechSpy = () => {
   window.__spoken = [];
@@ -164,7 +233,7 @@ async function coachRun({ feed, reply, label }) {
   const initCoach = {
     fn: ([p, key]) => {
       localStorage.setItem('broll.project', JSON.stringify(p));
-      localStorage.setItem('broll.settings', JSON.stringify({ countdown: 3, voice: true }));
+      localStorage.setItem('broll.settings', JSON.stringify({ voice: true }));
       localStorage.setItem('broll.claudeKey', key);
     },
     arg: [project, 'sk-ant-test-key'],
@@ -197,7 +266,7 @@ async function coachRun({ feed, reply, label }) {
 }
 const json = (status, obj) => ({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(obj) });
 const goodReply = () => json(200, {
-  id: 'msg_test', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn', stop_sequence: null,
+  id: 'msg_test', type: 'message', role: 'assistant', model: 'claude-sonnet-5-5', stop_reason: 'end_turn', stop_sequence: null,
   content: [{ type: 'text', text: JSON.stringify({ reads_as: 'confident, not heavy', coaching: 'This reads confident, not heavy. Drop your shoulders and let your head hang before the breath.' }) }],
   usage: { input_tokens: 1400, output_tokens: 120 },
 });
@@ -208,8 +277,8 @@ const goodReply = () => json(200, {
   const img = b.messages?.[0]?.content?.find((c) => c.type === 'image');
   ok('Coaching shows "Looking at your take…" while Claude works', /Looking at your take/.test(r.thinking), r.thinking);
   ok('One frame is sent as a JPEG photo', img?.source?.media_type === 'image/jpeg' && img.source.data.length > 10000, img ? `${Math.round(img.source.data.length * 0.75 / 1024)} KB` : 'no image');
-  ok('Request uses Claude Opus 5.5, low effort, JSON reply, refusal fallback',
-    b.model === 'claude-opus-5-5' && b.output_config?.effort === 'low' && b.output_config?.format?.type === 'json_schema' && b.fallbacks === 'default' && /server-side-fallback-2026-07-01/.test(msg.headers['anthropic-beta'] || ''),
+  ok('Request uses Claude Sonnet 5.5, low effort, JSON reply, refusal fallback',
+    b.model === 'claude-sonnet-5-5' && b.output_config?.effort === 'low' && b.output_config?.format?.type === 'json_schema' && b.fallbacks === 'default' && /server-side-fallback-2026-07-01/.test(msg.headers['anthropic-beta'] || ''),
     `${b.model}, effort ${b.output_config?.effort}, beta ${msg?.headers['anthropic-beta']}`);
   ok('Key is sent only to Anthropic, as a browser call', msg?.headers.authorization === 'Bearer sk-ant-test-key' && msg?.headers['anthropic-dangerous-direct-browser-access'] === 'true');
   ok('Shot details and check results go along with the frame', /Feeling it should read as: heavy/.test(JSON.stringify(b)) && /Automatic checks/.test(JSON.stringify(b)));
@@ -236,7 +305,7 @@ const goodReply = () => json(200, {
   const { browser, page } = await open('good');
   await page.route('https://api.anthropic.com/**', (route) => route.fulfill(
     route.request().headers().authorization === 'Bearer sk-ant-good'
-      ? json(200, { id: 'claude-opus-5-5', type: 'model', display_name: 'Claude Opus 5.5', created_at: '2026-01-01T00:00:00Z' })
+      ? json(200, { id: 'claude-sonnet-5-5', type: 'model', display_name: 'Claude Sonnet 5.5', created_at: '2026-01-01T00:00:00Z' })
       : json(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } })));
   await page.click('#home-settings');
   await page.fill('#coach-key', 'hello');

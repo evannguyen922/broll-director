@@ -36,21 +36,30 @@ const reqP = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result
 
 export async function saveTake(take) {
   // Only plain facts + the video and thumbnail are stored (not the in-memory extras).
-  const { blob, thumb, frame, file, coachState, coachError, ...rest } = take;
-  const record = {
-    ...rest,
-    video: await blob.arrayBuffer(),
-    videoType: blob.type,
-    thumb: thumb ? await thumb.arrayBuffer() : null,
-  };
-  await tx('takes', 'readwrite', (s) => s.put(record));
+  const { blob, thumb, still, file, coachState, coachError, ...rest } = take;
+  // The video file is stored exactly as it is (same bytes, same quality).
+  try {
+    await tx('takes', 'readwrite', (s) => s.put({ ...rest, video: blob, videoType: blob.type, thumb: thumb || null }));
+  } catch (e) {
+    // Older browsers can't store files directly; store the raw bytes instead.
+    console.warn('Storing as bytes', e);
+    const record = {
+      ...rest,
+      video: await blob.arrayBuffer(),
+      videoType: blob.type,
+      thumb: thumb ? await thumb.arrayBuffer() : null,
+    };
+    await tx('takes', 'readwrite', (s) => s.put(record));
+  }
 }
+
+const asBlob = (v, type) => (v instanceof Blob && (v.type || !type) ? v : new Blob([v], { type }));
 
 function hydrate(r) {
   return {
     ...r,
-    blob: new Blob([r.video], { type: r.videoType }),
-    thumb: r.thumb ? new Blob([r.thumb], { type: 'image/jpeg' }) : null,
+    blob: asBlob(r.video, r.videoType),
+    thumb: r.thumb ? asBlob(r.thumb, 'image/jpeg') : null,
   };
 }
 

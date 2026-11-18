@@ -6,6 +6,7 @@ import { GRAY_W, frameStats, regionMean, globalShift, judgeTake, liveHint } from
 import { coachingOn, coachTake, getKey, setKey, testKey } from './coach.js';
 
 const $ = (id) => document.getElementById(id);
+const COUNTDOWN = 3; // always 3-2-1 before recording
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Tiny DOM helper: h('div', {class: 'x'}, 'text', child)
@@ -37,7 +38,7 @@ const EXAMPLES = [
 
 const state = {
   project: store.get('broll.project', null), // { id, topic, shuffle, shots: [...] }
-  settings: { countdown: 5, voice: true, ...store.get('broll.settings', {}) },
+  settings: { voice: true, ...store.get('broll.settings', {}) },
   takeInfo: [],
   current: 0,
   facing: 'environment',
@@ -277,7 +278,7 @@ async function startCamera() {
     return;
   }
   camMsg('Starting the camera…');
-  const want = { facingMode: { ideal: state.facing }, width: { ideal: 1080 }, height: { ideal: 1920 }, frameRate: { ideal: 30 } };
+  const want = { facingMode: { ideal: state.facing }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } };
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: want, audio: false });
@@ -293,6 +294,7 @@ async function startCamera() {
     }
   }
   if ($('film').hidden) { stream.getTracks().forEach((t) => t.stop()); return; }
+  await bestQuality(stream.getVideoTracks()[0]);
   state.stream = stream;
   video.srcObject = stream;
   $('cam-frame').classList.toggle('mirror', state.facing === 'user');
@@ -300,6 +302,45 @@ async function startCamera() {
   if (!video.videoWidth) await new Promise((r) => video.addEventListener('loadedmetadata', r, { once: true }));
   layoutFrame();
   camMsg(null);
+  showQuality();
+}
+
+// Ask the camera for the most it can do, up to 4K at 30 frames a second,
+// in a 16:9 shape (which the phone turns upright for portrait).
+async function bestQuality(track) {
+  try {
+    const caps = track.getCapabilities ? track.getCapabilities() : null;
+    const s = track.getSettings();
+    if (!caps || !caps.width?.max || !caps.height?.max) return;
+    const long = Math.min(3840, Math.max(caps.width.max, caps.height.max));
+    const short = Math.round((long * 9) / 16);
+    const upright = (s.height || 0) > (s.width || 0);
+    const w = upright ? short : long, h = upright ? long : short;
+    if (w * h <= (s.width || 0) * (s.height || 0)) return;
+    await track.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: 30 } });
+  } catch (e) {
+    console.warn('Could not raise camera quality', e);
+  }
+}
+
+const qualityName = (w, h) => {
+  const s = Math.min(w, h);
+  return s >= 2160 ? '4K' : s >= 1440 ? '1440p' : s >= 1080 ? '1080p' : s >= 720 ? '720p' : `${s}p`;
+};
+
+// What the camera is actually giving us (this is what gets recorded).
+function cameraQuality() {
+  const s = state.stream?.getVideoTracks()[0]?.getSettings?.() || {};
+  const w = video.videoWidth || s.width || 0, h = video.videoHeight || s.height || 0;
+  return { w, h, fps: s.frameRate ? Math.round(s.frameRate) : null };
+}
+
+function showQuality() {
+  const q = cameraQuality();
+  const el = $('quality');
+  el.hidden = !q.w;
+  el.textContent = q.w ? `${qualityName(q.w, q.h)}${q.fps ? ` · ${q.fps} fps` : ''}` : '';
+  el.title = q.w ? `${q.w} × ${q.h}` : '';
 }
 
 function stopCamera() {
@@ -314,15 +355,15 @@ function flipCamera() {
   startCamera();
 }
 
-// Grab one frame and measure it.
-function sample({ withFace }) {
-  const vw = video.videoWidth, vh = video.videoHeight;
+// Grab one frame (from the camera, or from a clip) and measure it.
+function sample({ withFace, source = video }) {
+  const vw = source.videoWidth, vh = source.videoHeight;
   if (!vw || !vh) return null;
   const gw = GRAY_W, gh = Math.round(GRAY_W * vh / vw);
   if (grayCanvas.width !== gw || grayCanvas.height !== gh) { grayCanvas.width = gw; grayCanvas.height = gh; }
-  grayCtx.drawImage(video, 0, 0, gw, gh);
+  grayCtx.drawImage(source, 0, 0, gw, gh);
   const stats = frameStats(grayCtx.getImageData(0, 0, gw, gh));
-  const face = withFace ? findFaceInVideo(video) : undefined;
+  const face = withFace ? findFaceInVideo(source) : undefined;
   const faceLuma = face && face.found ? regionMean(stats.gray, gw, gh, face) : null;
   return { ...stats, face: face === undefined ? null : face, faceLuma };
 }
@@ -341,7 +382,7 @@ function idleCheck() {
   const smp = sample({ withFace: s.frame !== 'detail' && faceCheckerReady() });
   if (!smp) return;
   const hint = liveHint(s, smp);
-  if (!hint && s.frame !== 'detail' && !faceCheckerReady()) setHint({ short: 'Getting the framing check ready…', good: false });
+  if (!hint && s.frame !== 'detail' && !faceCheckerReady()) setHint({ short: 'Loading framing check…', good: false });
   else setHint(hint);
 }
 
@@ -351,10 +392,11 @@ function directionText(i) {
 }
 
 function setRecUI() {
-  const busy = state.phase === 'countdown' || state.phase === 'recording';
-  $('rec').classList.toggle('busy', busy);
+  const busy = ['countdown', 'recording', 'checking'].includes(state.phase);
+  $('rec').classList.toggle('busy', state.phase === 'countdown' || state.phase === 'recording');
+  $('rec').disabled = state.phase === 'checking';
   $('rec').setAttribute('aria-label', state.phase === 'recording' ? 'Stop' : state.phase === 'countdown' ? 'Cancel' : 'Record');
-  for (const id of ['flip', 'say', 'prev', 'next', 'film-back', 'film-clips']) $(id).disabled = busy;
+  for (const id of ['flip', 'say', 'prev', 'next', 'film-back', 'film-clips', 'from-photos', 'open-settings']) $(id).disabled = busy;
   if (!busy) { $('prev').disabled = state.current === 0; $('next').disabled = state.current === state.project.shots.length - 1; }
   $('rec-badge').hidden = state.phase !== 'recording';
   if (state.phase !== 'recording') $('ring-fg').style.strokeDashoffset = 289;
@@ -381,10 +423,10 @@ async function runTake() {
     $('listen').hidden = true;
     if (token !== state.takeToken) return;
   }
-  for (let n = state.settings.countdown; n > 0; n--) {
+  for (let n = COUNTDOWN; n > 0; n--) {
     $('count').textContent = n;
     $('count').hidden = false;
-    beep(n <= 3 ? 740 : 620, 110);
+    beep(740, 110);
     await sleep(1000);
     if (token !== state.takeToken) return;
   }
@@ -414,8 +456,12 @@ function startRecording() {
   const shot = shotAt(state.current);
   if (!window.MediaRecorder) { toast("This browser can't record video"); cancelTake(); return; }
   const mime = pickMime();
+  // Enough bitrate for the resolution: about 12 Mbps at 1080p, up to 50 at 4K.
+  const q = cameraQuality();
+  const bps = Math.round(Math.min(50e6, Math.max(8e6, q.w * q.h * 6)));
+  state.recQuality = q;
   try {
-    rec = new MediaRecorder(state.stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+    rec = new MediaRecorder(state.stream, mime ? { mimeType: mime, videoBitsPerSecond: bps } : undefined);
   } catch {
     rec = new MediaRecorder(state.stream);
   }
@@ -455,18 +501,21 @@ function startRecording() {
 
 // One frame from the middle of the take: a small one for the clip grid and
 // a sharper one for Claude to look at.
-function captureThumb() {
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw) return;
+function grabStills(source = video) {
+  const vw = source.videoWidth, vh = source.videoHeight;
+  if (!vw) return Promise.resolve({ still: null, thumb: null });
   const big = document.createElement('canvas');
   const scale = Math.min(1, 1024 / Math.max(vw, vh));
   big.width = Math.round(vw * scale); big.height = Math.round(vh * scale);
-  big.getContext('2d').drawImage(video, 0, 0, big.width, big.height);
-  big.toBlob((b) => { frameBlob = b; }, 'image/jpeg', 0.85);
+  big.getContext('2d').drawImage(source, 0, 0, big.width, big.height);
   const c = document.createElement('canvas');
   c.width = 360; c.height = Math.round(360 * vh / vw);
   c.getContext('2d').drawImage(big, 0, 0, c.width, c.height);
-  c.toBlob((b) => { thumbBlob = b; }, 'image/jpeg', 0.82);
+  const toBlob = (cv, qty) => new Promise((r) => cv.toBlob(r, 'image/jpeg', qty));
+  return Promise.all([toBlob(big, 0.85), toBlob(c, 0.82)]).then(([still, thumb]) => ({ still, thumb }));
+}
+function captureThumb() {
+  grabStills().then(({ still, thumb }) => { frameBlob = still; thumbBlob = thumb; });
 }
 
 function stopRecording() {
@@ -481,6 +530,115 @@ function stopRecording() {
 }
 
 let pending = null;
+
+// ------------------------------------------------------------------ clips from Photos
+function pickFromPhotos() {
+  if (state.phase !== 'idle') return;
+  unlockAudio();
+  $('photo-input').value = '';
+  $('photo-input').click();
+}
+
+function showChecking(fraction, sub) {
+  $('checking').hidden = fraction == null;
+  if (fraction == null) return;
+  $('checking-bar').style.width = `${Math.round(fraction * 100)}%`;
+  $('checking-sub').textContent = sub || '';
+}
+
+const once = (el, ev, ms = 15000) => new Promise((resolve, reject) => {
+  const t = setTimeout(() => reject(new Error(`timeout waiting for ${ev}`)), ms);
+  el.addEventListener(ev, () => { clearTimeout(t); resolve(); }, { once: true });
+  el.addEventListener('error', () => { clearTimeout(t); reject(el.error || new Error('video error')); }, { once: true });
+});
+
+async function seekTo(v, t) {
+  if (Math.abs(v.currentTime - t) < 0.001) return;
+  const done = once(v, 'seeked', 8000);
+  v.currentTime = t;
+  await done;
+}
+
+// Some files don't say how long they are until you jump to the end.
+async function clipDuration(v) {
+  if (Number.isFinite(v.duration) && v.duration > 0) return v.duration;
+  await seekTo(v, 1e7).catch(() => {});
+  const d = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : v.currentTime;
+  await seekTo(v, 0).catch(() => {});
+  return d;
+}
+
+const typeFromName = (name) => (/\.mov$/i.test(name) ? 'video/quicktime' : /\.webm$/i.test(name) ? 'video/webm' : 'video/mp4');
+
+// Runs the same checks as a live take on a clip you filmed with the Camera
+// app, then files it under the current shot. The file itself is kept
+// untouched, so it keeps its full quality.
+async function checkImported(file) {
+  if (state.phase !== 'idle') return;
+  const shot = shotAt(state.current);
+  state.phase = 'checking';
+  setRecUI();
+  setHint(null);
+  showChecking(0, 'Opening the clip…');
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto';
+  v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+  v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+  document.body.append(v);
+  const url = URL.createObjectURL(file);
+  try {
+    v.src = url;
+    await once(v, 'loadeddata', 20000);
+    // iPhone only paints frames once playback has started.
+    try { await v.play(); v.pause(); } catch { /* muted, so allowed */ }
+    const duration = await clipDuration(v);
+    const vw = v.videoWidth, vh = v.videoHeight;
+    if (!vw || !duration) throw new Error('no video');
+
+    if (shot.frame !== 'detail' && !faceCheckerReady()) {
+      showChecking(0.02, 'Getting the framing check ready…');
+      await Promise.race([loadFaceChecker(), sleep(15000)]);
+    }
+    // Look at evenly spaced moments; at each, compare with a frame 0.2 s
+    // later to see whether the picture is sliding (shake).
+    const start = Math.min(0.5, duration * 0.15);
+    const end = Math.max(start, duration - 0.8);
+    const n = Math.max(6, Math.min(16, Math.round((end - start) * 2)));
+    const smp = [];
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? start : start + ((end - start) * i) / (n - 1);
+      await seekTo(v, t);
+      const a = sample({ withFace: shot.frame !== 'detail' && faceCheckerReady(), source: v });
+      let shift = null;
+      if (t + 0.2 < duration) {
+        await seekTo(v, t + 0.2);
+        const b = sample({ withFace: false, source: v });
+        if (a && b) shift = globalShift(a.gray, b.gray, a.w, a.h);
+      }
+      if (a) smp.push({ t, mean: a.mean, clipped: a.clipped, face: a.face, faceLuma: a.faceLuma, shift });
+      showChecking((i + 1) / (n + 1), `${qualityName(vw, vh)} · ${duration.toFixed(1)}s`);
+    }
+    await seekTo(v, Math.min(duration / 2, Math.max(0, duration - 0.1)));
+    const { still, thumb } = await grabStills(v);
+    showChecking(1, '');
+
+    const verdict = judgeTake({ shot, samples: smp, motion: [], duration, sideways: vw > vh });
+    const type = file.type || typeFromName(file.name || '');
+    await presentTake(shot, verdict, {
+      blob: new Blob([file], { type }), thumb, still, duration,
+      width: vw, height: vh, source: 'photos', originalName: file.name || '',
+    });
+  } catch (err) {
+    console.warn('Could not check the clip', err);
+    state.phase = 'idle';
+    setRecUI();
+    toast("Couldn't open that clip. Try another one, or save it to Files first and pick it from there.", 4500);
+  } finally {
+    showChecking(null);
+    v.removeAttribute('src'); v.load(); v.remove();
+    URL.revokeObjectURL(url);
+  }
+}
 
 async function finishTake() {
   const shot = shotAt(state.current);
@@ -498,6 +656,16 @@ async function finishTake() {
     return;
   }
   const verdict = judgeTake({ shot, samples, motion: motionSamples.slice(), duration: state.duration });
+  const q = state.recQuality || {};
+  await presentTake(shot, verdict, {
+    blob, thumb: thumbBlob, still: frameBlob, duration: state.duration,
+    width: q.w, height: q.h, fps: q.fps, source: 'camera',
+  });
+}
+
+// Shared by recorded takes and clips from Photos: save if good, show the
+// review, ask Claude, say the result out loud.
+async function presentTake(shot, verdict, media) {
   pending = {
     id: `t${Date.now()}`,
     projectId: state.project.id,
@@ -510,19 +678,16 @@ async function finishTake() {
     feeling: shot.feeling,
     frame: shot.frame,
     hold: shot.hold,
-    duration: state.duration,
     ok: verdict.ok,
     fix: verdict.fix,
     createdAt: Date.now(),
-    blob,
-    thumb: thumbBlob,
-    frame: frameBlob,
     saved: false,
+    ...media,
   };
   state.lastVerdict = verdict;
   if (verdict.ok) await keepPending();
   state.phase = 'review';
-  const coaching = coachingOn() && pending.frame;
+  const coaching = coachingOn() && pending.still;
   pending.coachState = coaching ? 'thinking' : 'off';
   showReview(verdict);
   if (coaching) {
@@ -537,7 +702,7 @@ async function finishTake() {
 async function getCoaching(take, shot, verdict, headline) {
   let note = null, failure = null;
   try {
-    note = await coachTake({ frame: take.frame, shot, actName: actOf(shot.act).name, verdict });
+    note = await coachTake({ frame: take.still, shot, actName: actOf(shot.act).name, verdict });
   } catch (err) {
     failure = err;
   }
@@ -581,6 +746,9 @@ function showReview(verdict) {
     h('span', { class: 'lbl' }, c.label),
     h('span', { class: 'nt' }, c.note))));
   renderReviewState(verdict);
+  $('review-quality').textContent = pending.width
+    ? `${pending.source === 'photos' ? 'From your Photos' : 'Recorded'} at ${qualityLine(pending)}`
+    : '';
   $('review').hidden = false;
 }
 
@@ -636,12 +804,10 @@ function closeReview(where) {
 
 // ------------------------------------------------------------------ settings
 function updateSettingsLabels() {
-  $('cd-label').textContent = `${state.settings.countdown}s`;
-  $('voice-label').textContent = state.settings.voice ? 'on' : 'off';
-  for (const b of $('seg-countdown').children) b.classList.toggle('on', Number(b.dataset.v) === state.settings.countdown);
+
   for (const b of $('seg-voice').children) b.classList.toggle('on', (b.dataset.v === 'on') === state.settings.voice);
   const on = coachingOn();
-  $('coach-label').textContent = on ? 'on' : 'off';
+  $('coach-dot').hidden = !on;
   $('home-coach').textContent = on ? 'on' : 'off, set it up';
   $('coach-pill').textContent = on ? 'On' : 'Off';
   $('coach-pill').classList.toggle('on', on);
@@ -687,14 +853,19 @@ function setSetting(key, value) {
 
 // ------------------------------------------------------------------ clips
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-const extFor = (type) => (/mp4/.test(type) ? 'mp4' : /quicktime/.test(type) ? 'mov' : /webm/.test(type) ? 'webm' : 'mp4');
+const extFor = (type, name = '') => {
+  const fromName = /\.([a-z0-9]{2,4})$/i.exec(name);
+  if (fromName) return fromName[1].toLowerCase();
+  return /quicktime/.test(type) ? 'mov' : /webm/.test(type) ? 'webm' : 'mp4';
+};
+const qualityLine = (t) => (t.width ? `${qualityName(t.width, t.height)} (${t.width} × ${t.height}${t.fps ? `, ${t.fps} fps` : ''})` : '');
 let clipTakes = [];
 let thumbUrls = [];
 
 function fileFor(take) {
   const sameShot = clipTakes.filter((t) => t.shotIndex === take.shotIndex);
   const n = sameShot.indexOf(take) + 1;
-  const name = `${String(take.shotIndex + 1).padStart(2, '0')}-${take.act}-${slug(take.place)}-${slug(take.feeling)}${sameShot.length > 1 ? `-take${n}` : ''}.${extFor(take.blob.type)}`;
+  const name = `${String(take.shotIndex + 1).padStart(2, '0')}-${take.act}-${slug(take.place)}-${slug(take.feeling)}${sameShot.length > 1 ? `-take${n}` : ''}.${extFor(take.blob.type, take.originalName)}`;
   return new File([take.blob], name, { type: take.blob.type || 'video/mp4' });
 }
 
@@ -754,6 +925,7 @@ function openPlayer(take) {
   pv.src = playerUrl;
   pv.play().catch(() => {});
   $('player-where').textContent = `Shot ${take.shotIndex + 1} · ${actOf(take.act).name} · ${cap(take.place)} · ${take.feeling}`;
+  $('player-quality').textContent = [qualityLine(take), take.source === 'photos' ? 'from your Photos, original file' : ''].filter(Boolean).join(' · ');
   const lines = [take.ok ? take.action : `${take.action} (Kept anyway: ${take.fix})`];
   if (take.coaching) lines.push(`Claude: ${take.readsAs ? `reads as ${take.readsAs}. ` : ''}${take.coaching}`);
   $('player-action').textContent = lines.join('\n');
@@ -832,7 +1004,11 @@ function wire() {
   };
   $('settings-done').onclick = () => { $('settings').hidden = true; };
   $('settings').onclick = (e) => { if (e.target === $('settings')) $('settings').hidden = true; };
-  for (const b of $('seg-countdown').children) b.onclick = () => setSetting('countdown', Number(b.dataset.v));
+  $('from-photos').onclick = pickFromPhotos;
+  $('photo-input').onchange = () => {
+    const file = $('photo-input').files && $('photo-input').files[0];
+    if (file) checkImported(file);
+  };
   for (const b of $('seg-voice').children) b.onclick = () => setSetting('voice', b.dataset.v === 'on');
 
   $('clips-back').onclick = () => {
@@ -880,4 +1056,4 @@ async function boot() {
 boot();
 
 // Handy for testing in a desktop browser's console.
-window.brollDirector = { state, judgeTake, get samples() { return samples; } };
+window.brollDirector = { state, judgeTake, get samples() { return samples; }, clipFiles: () => clipTakes.map((t) => t.file) };

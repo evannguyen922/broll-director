@@ -12,25 +12,28 @@ Your videos stay on your phone and are never uploaded. If you turn on Claude coa
 2. Type one line about your video, for example "student who's always tired tries a new sleep routine", and tap **Make my shot list**.
 3. Look over the 9 shots. Tap **Swap** on any shot you don't like, or **Shuffle** for a whole new list.
 4. Tap **Start filming**. Allow the camera when Safari asks (and motion, which is used to check the phone is steady).
-5. Prop the phone up and tap the red button. It reads the direction out loud, counts down, records for the hold time, and stops on its own.
+5. Prop the phone up and tap the red button. It reads the direction out loud, counts 3-2-1, records for the hold time, and stops on its own.
+   Or tap **Use a clip from my Photos** to pick a video you filmed with the iPhone Camera app (4K is fine): it runs the same checks and files it under the current shot, keeping the original file.
 6. It tells you **Good shot, saved** or **Do it again** with one thing to fix. You can always **Keep it anyway**.
 7. When you're done, open **My clips** (the grid icon at the top right). Tap a clip to play it, then **Save to my phone**. In the share sheet pick **Save Video** and it goes to your Photos, ready for CapCut. **Save all** saves every clip at once.
 
-**Claude coaching (optional):** open settings (the line under the record button, or "Claude coaching" on the home screen), paste your Claude API key, and tap **Save and check key**. After each take Claude looks at one frame and says, out loud, what the shot reads as and the one thing to change. See [Claude coaching](#claude-coaching) below for how to get a key.
+**Claude coaching (optional):** open settings (the gear at the bottom right of the filming screen, or "Claude coaching" on the home screen), paste your Claude API key, and tap **Save and check key**. After each take Claude looks at one frame and says, out loud, what the shot reads as and the one thing to change. See [Claude coaching](#claude-coaching) below for how to get a key.
 
-If you can't hear the voice, turn the volume up and check the silent switch. You can change the countdown (3, 5 or 10 seconds) and turn the voice off from the line under the record button.
+If you can't hear the voice, turn the volume up and check the silent switch. You can turn the voice off in settings (the gear).
 
 ## What's built (v1)
 
 - **Shot list from a built-in library.** 72 placeholder shots (24 per act) in `shots.json`. The app picks 9 that fit your topic: it looks for words like "tired", "budget" or "skincare", favours shots about your main theme, and mixes rooms and shot sizes (wide, waist up, close up, hands).
 - **Shot cards** with the place in your home, what to do in one sentence, the feeling it should read as, a filming tip, how long to hold, and the shot size.
-- **Filming screen** for portrait iPhone: shot card on top, camera preview (back camera, Flip for the front one), a big record button, countdown, the direction read out loud, a "Text goes here" guide at the top of the frame, and a live hint ("Step back", "Too dark", "Framing looks good") before you record.
+- **Filming screen** for portrait iPhone: shot card on top, camera preview (back camera, Flip for the front one), a big record button, a 3-2-1 countdown, the direction read out loud, a "Text goes here" guide at the top of the frame, and a live hint ("Step back", "Too dark", "Framing looks good") before you record.
+- **Best camera quality**: the app asks the camera for the most it can give, up to 4K at 30 frames a second, vertical. The label on the preview (for example "1080p · 30 fps") shows what the camera actually delivers, which is what gets recorded; the review and the clip player show the exact size (for example 1080 × 1920).
+- **Use a clip from my Photos**: pick a video filmed with the iPhone Camera app. The app runs the same checks on it (framing, light, steadiness by comparing frames, length, and whether it's sideways), files it under the current shot, and keeps the file exactly as it was, so saving it back gives you the original quality.
 - **Take checks**, all done on the phone:
   - **Framing**: Google's MediaPipe Face Landmarker finds your face and checks it's the right size for the shot and that there's room above your head for text.
   - **Light**: too dark, blown out, or backlit (face much darker than the room).
   - **Steadiness**: the phone's motion sensor; if that isn't allowed, it measures whether the whole picture is sliding around.
   - **Length**: at least the hold time.
-- **Claude coaching** (optional, needs your own Claude API key): after each take, one still frame from the middle of the take goes to Claude (Claude Opus 5.5) with the shot you were going for and the phone's own check results. Claude answers like a director in one or two short spoken sentences: what the shot reads as, and the single thing to change. You see it on the review screen ("Reads as tired and stuck") and hear it read out. It's saved with the clip, so the player shows it later. If Claude can't be reached, you still hear the phone's own fix.
+- **Claude coaching** (optional, needs your own Claude API key): after each take, one still frame from the middle of the take goes to Claude (Claude Sonnet 5.5) with the shot you were going for and the phone's own check results. Claude answers like a director in one or two short spoken sentences: what the shot reads as, and the single thing to change. You see it on the review screen ("Reads as tired and stuck") and hear it read out. It's saved with the clip, so the player shows it later. If Claude can't be reached, you still hear the phone's own fix.
 - **Progress dots** for the 9 shots, coloured by act. Tap a dot to jump to that shot.
 - **Your clips**: grid of every kept clip, grouped by act and then by room, with its mood label. Tap to play, save one clip, one act, or all. Files are named like `03-struggle-desk-foggy.mp4` so they sort in order in CapCut.
 - Clips are stored in the browser's own storage on your phone (IndexedDB). Video is recorded without sound (b-roll gets music in the edit, and using the mic on iPhone makes the voice directions much quieter).
@@ -70,16 +73,16 @@ The app has no server of its own, so your phone talks to Claude directly using y
 
 **Getting a key (once):**
 1. Go to **console.anthropic.com** and sign in (or sign up).
-2. Click **Billing** and add a little credit ($5 lasts a long time at about 1 cent per take).
+2. Click **Billing** and add a little credit ($5 lasts a long time at about half a cent per take).
 3. Optional but smart: in **Limits**, set a monthly spend limit, for example $10.
 4. Click **API keys** → **Create key**, name it "B-roll director", and copy it (it starts with `sk-ant-`).
 5. On your phone, open the app → settings → paste it → **Save and check key**. It should say "Key works".
 
-**What it costs:** about 1 cent per take (one photo plus a short reply from Claude Opus 5.5).
+**What it costs:** about half a cent per take (one photo plus a short reply from Claude Sonnet 5.5).
 
 **Privacy:** the key is stored only in this phone's browser storage, never in the code or on GitHub. Only one still frame per take is sent to Anthropic; videos never leave your phone. Anyone who has your unlocked phone could use the key, which is why the spend limit is worth setting. Tap **Remove key** in settings to turn coaching off.
 
-**How it's built:** `js/coach.js` loads Anthropic's official JavaScript library (pinned to version 1.4.0) and calls Claude Opus 5.5 at low effort for a quick reply, asking for a fixed two-field answer (`reads_as`, `coaching`). If Claude declines a frame for safety reasons, Anthropic retries it on a fallback model automatically.
+**How it's built:** `js/coach.js` loads Anthropic's official JavaScript library (pinned to version 1.4.0) and calls Claude Sonnet 5.5 at low effort for a quick reply, asking for a fixed two-field answer (`reads_as`, `coaching`). If Claude declines a frame for safety reasons, Anthropic retries it on a fallback model automatically.
 
 ## Files
 
@@ -101,7 +104,7 @@ Plain HTML and JavaScript, no build step. GitHub Pages serves the folder as it i
 
 ## Tests
 
-`tests/run.sh` opens the app in a headless Chrome with a fake camera (built from a sample portrait photo) and checks the whole flow: making a list, swapping, recording, the review, progress dots, the clip grid, playback, and storage. It also feeds five takes that should get specific answers: a well-framed take is accepted, and too tight, too dark, shaky, and stopped-too-early takes each get the right fix. For Claude coaching it stands in for Anthropic's server (so no key or money is needed) and checks what the app sends (one JPEG frame, the shot, the check results, the right model and settings), that the note is shown, spoken after the headline and saved with the clip, that a bad key gets a plain message while you still hear the phone's own fix, and the key settings.
+`tests/run.sh` opens the app in a headless Chrome with a fake camera (built from a sample portrait photo) and checks the whole flow: making a list, swapping, recording, the review, progress dots, the clip grid, playback, and storage. It also feeds five takes that should get specific answers: a well-framed take is accepted, and too tight, too dark, shaky, and stopped-too-early takes each get the right fix. It feeds real video files through **Use a clip from my Photos** (a good clip, a dark one, a too-short one, a sideways one and a 4K one) and checks each verdict, that the saved file is byte-for-byte the original, and that it keeps its file type. It checks the 3-2-1 countdown, the quality label, and that the framing message and bottom buttons fit on an iPhone SE and an iPhone 14. For Claude coaching it stands in for Anthropic's server (so no key or money is needed) and checks what the app sends (one JPEG frame, the shot, the check results, the right model and settings), that the note is shown, spoken after the headline and saved with the clip, that a bad key gets a plain message while you still hear the phone's own fix, and the key settings.
 
 ```bash
 cd tests && npm install && npx playwright install chromium && sh run.sh
@@ -113,6 +116,9 @@ cd tests && npm install && npx playwright install chromium && sh run.sh
 - The first time you film, the face finder downloads (about 10 MB) and takes a few seconds. Until it's ready, framing isn't checked.
 - Safari can clear website storage if you don't open the site for about a week. Adding it to your Home Screen avoids that, but save clips to Photos when you finish anyway.
 - Saving many long clips at once can be too much for the iPhone share sheet. If that happens, use **Save these** per act.
+- Live recording quality is whatever iPhone Safari lets a web page have; on many iPhones that's 1080p, not the Camera app's 4K. For full 4K, film in the Camera app and use **Use a clip from my Photos**.
+- When a website picks a video from Photos, iPhone can shrink it on the way in. The review shows the size the app actually got: if it's lower than you filmed (for example 720p instead of 4K), save the video to Files first and pick it with **Choose File**, which hands over the original.
+- 4K clips are big (a few hundred MB per minute), and they're stored inside the app until you save them, so keep b-roll clips short.
 - Without Claude coaching, the "feeling" is direction only; nothing checks whether the take reads that way.
 - Claude sees one still frame, so it can't judge movement or timing; the phone's own checks cover steadiness and length.
 
