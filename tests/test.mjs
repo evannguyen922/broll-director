@@ -154,6 +154,114 @@ for (const sc of scenarios) {
   await browser.close();
 }
 
+// ---------- 3. Claude coaching (Claude's server is stood in for; no real key) ----------
+const speechSpy = () => {
+  window.__spoken = [];
+  const s = window.speechSynthesis;
+  if (s) s.speak = (u) => { window.__spoken.push(u.text); setTimeout(() => u.onend && u.onend(), 60); };
+};
+async function coachRun({ feed, reply, label }) {
+  const initCoach = {
+    fn: ([p, key]) => {
+      localStorage.setItem('broll.project', JSON.stringify(p));
+      localStorage.setItem('broll.settings', JSON.stringify({ countdown: 3, voice: true }));
+      localStorage.setItem('broll.claudeKey', key);
+    },
+    arg: [project, 'sk-ant-test-key'],
+  };
+  const { browser, page, errors } = await open(feed, initCoach);
+  await page.evaluate(speechSpy);
+  const sent = [];
+  await page.route('https://api.anthropic.com/**', async (route) => {
+    const req = route.request();
+    sent.push({ url: req.url(), headers: req.headers(), body: req.postDataJSON?.() });
+    await new Promise((r) => setTimeout(r, 400));
+    await route.fulfill(reply(req));
+  });
+  await page.click('#resume-film');
+  await page.waitForFunction(() => document.querySelector('#cam-msg').hidden && document.querySelector('#video').videoWidth > 0, null, { timeout: 20000 });
+  await waitFaceReady(page).catch(() => {});
+  await page.click('#rec');
+  await page.waitForSelector('#review:not([hidden])', { timeout: 40000 });
+  const thinking = await page.textContent('#coach-line');
+  await page.waitForFunction(() => !document.querySelector('#coach').classList.contains('thinking'), null, { timeout: 30000 });
+  await page.waitForTimeout(400);
+  const shown = await page.evaluate(() => ({
+    title: document.querySelector('#verdict-title').textContent,
+    reads: document.querySelector('#coach-reads').textContent,
+    line: document.querySelector('#coach-line').textContent,
+    spoken: window.__spoken.slice(),
+  }));
+  await page.screenshot({ path: `${OUT}11-coach-${label}.png` });
+  return { browser, page, errors, sent, thinking, shown };
+}
+const json = (status, obj) => ({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(obj) });
+const goodReply = () => json(200, {
+  id: 'msg_test', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn', stop_sequence: null,
+  content: [{ type: 'text', text: JSON.stringify({ reads_as: 'confident, not heavy', coaching: 'This reads confident, not heavy. Drop your shoulders and let your head hang before the breath.' }) }],
+  usage: { input_tokens: 1400, output_tokens: 120 },
+});
+{
+  const r = await coachRun({ feed: 'good', reply: goodReply, label: 'ok' });
+  const msg = r.sent.find((s) => s.url.endsWith('/v1/messages'));
+  const b = msg?.body || {};
+  const img = b.messages?.[0]?.content?.find((c) => c.type === 'image');
+  ok('Coaching shows "Looking at your take…" while Claude works', /Looking at your take/.test(r.thinking), r.thinking);
+  ok('One frame is sent as a JPEG photo', img?.source?.media_type === 'image/jpeg' && img.source.data.length > 10000, img ? `${Math.round(img.source.data.length * 0.75 / 1024)} KB` : 'no image');
+  ok('Request uses Claude Opus 5.5, low effort, JSON reply, refusal fallback',
+    b.model === 'claude-opus-5-5' && b.output_config?.effort === 'low' && b.output_config?.format?.type === 'json_schema' && b.fallbacks === 'default' && /server-side-fallback-2026-07-01/.test(msg.headers['anthropic-beta'] || ''),
+    `${b.model}, effort ${b.output_config?.effort}, beta ${msg?.headers['anthropic-beta']}`);
+  ok('Key is sent only to Anthropic, as a browser call', msg?.headers.authorization === 'Bearer sk-ant-test-key' && msg?.headers['anthropic-dangerous-direct-browser-access'] === 'true');
+  ok('Shot details and check results go along with the frame', /Feeling it should read as: heavy/.test(JSON.stringify(b)) && /Automatic checks/.test(JSON.stringify(b)));
+  ok("Claude's note is shown", /reads confident/.test(r.shown.line) && /confident, not heavy/.test(r.shown.reads), `${r.shown.reads} | ${r.shown.line}`);
+  ok("Headline is spoken, then Claude's note", r.shown.spoken.at(-2) === 'Good shot, saved.' && /Drop your shoulders/.test(r.shown.spoken.at(-1) || ''), JSON.stringify(r.shown.spoken.slice(-2)));
+  // Claude's note is saved with the clip
+  await r.page.click('#rv-next');
+  await r.page.click('#film-clips');
+  await r.page.waitForSelector('.clip');
+  await r.page.click('.clip >> nth=0');
+  const info = await r.page.textContent('#player-action');
+  ok("Claude's note is saved with the clip", /Claude: reads as confident, not heavy/.test(info), info.replace(/\n/g, ' / '));
+  ok('No page errors (coaching)', r.errors.length === 0, r.errors.slice(0, 3).join(' | '));
+  await r.browser.close();
+}
+{
+  const r = await coachRun({ feed: 'dark', reply: () => json(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }), label: 'badkey' });
+  ok('A bad key gets a plain message', /key didn't work/.test(r.shown.line), r.shown.line);
+  ok('Without Claude you still hear what to fix', /Too dark/.test(r.shown.spoken.at(-1) || ''), r.shown.spoken.at(-1));
+  await r.browser.close();
+}
+{
+  // Settings: paste a key and check it
+  const { browser, page } = await open('good');
+  await page.route('https://api.anthropic.com/**', (route) => route.fulfill(
+    route.request().headers().authorization === 'Bearer sk-ant-good'
+      ? json(200, { id: 'claude-opus-5-5', type: 'model', display_name: 'Claude Opus 5.5', created_at: '2026-01-01T00:00:00Z' })
+      : json(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } })));
+  await page.click('#home-settings');
+  await page.fill('#coach-key', 'hello');
+  await page.click('#coach-save');
+  const notKey = await page.textContent('#coach-status');
+  await page.fill('#coach-key', 'sk-ant-wrong');
+  await page.click('#coach-save');
+  await page.waitForFunction(() => !/Checking/.test(document.querySelector('#coach-status').textContent));
+  const wrong = await page.textContent('#coach-status');
+  page.once('dialog', (d) => d.accept());
+  await page.click('#coach-remove');
+  await page.click('#settings-done');
+  await page.click('#home-settings');
+  await page.fill('#coach-key', 'sk-ant-good');
+  await page.click('#coach-save');
+  await page.waitForFunction(() => !/Checking/.test(document.querySelector('#coach-status').textContent));
+  const good = await page.textContent('#coach-status');
+  const pill = await page.textContent('#coach-pill');
+  await page.screenshot({ path: `${OUT}12-settings-coach.png` });
+  ok('Settings rejects text that is not a key', /starts with sk-ant-/.test(notKey), notKey);
+  ok('Settings reports a wrong key', /didn't work/.test(wrong), wrong);
+  ok('Settings accepts a working key and turns coaching on', /Key works/.test(good) && pill === 'On', `${good} | ${pill}`);
+  await browser.close();
+}
+
 const failed = results.filter((r) => !r.pass).length;
 console.log(`\n${results.length - failed}/${results.length} checks passed`);
 process.exit(failed ? 1 : 0);

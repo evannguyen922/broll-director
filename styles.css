@@ -263,6 +263,31 @@ textarea::placeholder { color: var(--faint); }
 .seg button { min-width: 50px; height: 40px; border-radius: 10px; font-weight: 600; color: var(--muted); }
 .seg button.on { background: var(--surface-2); color: var(--text); }
 #settings .btn { margin-top: 12px; }
+.coach-setting { display: block; }
+.coach-setting .setting-help { margin-top: 4px; }
+.coach-setting input {
+  width: 100%; margin-top: 12px; height: 50px; padding: 0 14px;
+  background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 14px;
+  font: 16px -apple-system, system-ui, sans-serif; outline: none;
+  -webkit-user-select: text; user-select: text;
+}
+.coach-setting input:focus { border-color: #4a5a4a; }
+.coach-setting #coach-save { width: 100%; }
+.pill { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; background: var(--surface-2); color: var(--muted); vertical-align: 1px; }
+.pill.on { background: rgba(147, 211, 162, .18); color: var(--good); }
+.coach-status { font-size: 14px; margin: 10px 0 0; color: var(--muted); }
+.coach-status.good { color: var(--good); }
+.coach-status.bad { color: var(--warn); }
+
+/* Claude's note in the review */
+.coach { margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); }
+.coach-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.coach-name { font-size: 12px; font-weight: 700; color: var(--accent); }
+.reads { font-size: 12px; font-weight: 600; color: var(--muted); }
+.coach-line { margin: 4px 0 0; font-size: 15px; line-height: 1.4; }
+.coach.thinking .coach-line { color: var(--muted); animation: pulse 1.4s ease-in-out infinite; }
+.coach.failed .coach-line { color: var(--muted); font-size: 14px; }
+@keyframes pulse { 50% { opacity: .45; } }
 
 /* ---------- Clips ---------- */
 .note { color: var(--muted); font-size: 14px; background: var(--surface); border-radius: 14px; padding: 12px 14px; margin: 0 0 8px; }
@@ -295,7 +320,7 @@ textarea::placeholder { color: var(--faint); }
 .player { width: 100%; display: flex; flex-direction: column; padding: calc(var(--safe-top) + 8px) 16px calc(16px + var(--safe-bottom)); gap: 12px; }
 .player .close { align-self: flex-end; }
 #player-video { flex: 1; min-height: 0; width: 100%; object-fit: contain; border-radius: 14px; background: #000; }
-.player-info p { margin: 4px 0 0; }
+.player-info p { margin: 4px 0 0; white-space: pre-line; }
 
 /* ---------- Toast ---------- */
 .toast {

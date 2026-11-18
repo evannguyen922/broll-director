@@ -40,7 +40,8 @@
       <textarea id="topic" rows="3" maxlength="200" placeholder="e.g. student who's always tired tries a new sleep routine"></textarea>
       <div class="chips" id="examples"></div>
       <button class="btn primary big" id="make">Make my shot list</button>
-      <p class="fine">Your clips stay on this phone. Nothing is uploaded.</p>
+      <p class="fine">Your videos stay on this phone.</p>
+      <button class="link" id="home-settings">Claude coaching: <span id="home-coach">off</span></button>
     </div>
   </section>
 
@@ -115,7 +116,7 @@
         <span>Read</span>
       </button>
     </footer>
-    <button class="settings-link" id="open-settings">Countdown <b id="cd-label">5s</b> · Voice <b id="voice-label">on</b></button>
+    <button class="settings-link" id="open-settings">Countdown <b id="cd-label">5s</b> · Voice <b id="voice-label">on</b> · Claude <b id="coach-label">off</b></button>
   </section>
 
   <!-- ============ Review (after a take) ============ -->
@@ -126,6 +127,10 @@
         <div class="verdict">
           <div class="verdict-title" id="verdict-title"></div>
           <p class="verdict-fix" id="verdict-fix"></p>
+          <div class="coach" id="coach" hidden>
+            <div class="coach-head"><span class="coach-name">Claude</span><span class="reads" id="coach-reads"></span></div>
+            <p class="coach-line" id="coach-line"></p>
+          </div>
         </div>
       </div>
       <ul class="checks" id="checks"></ul>
@@ -155,6 +160,22 @@
         <div class="seg" id="seg-voice">
           <button data-v="on">On</button><button data-v="off">Off</button>
         </div>
+      </div>
+      <div class="setting coach-setting">
+        <div class="setting-name">Claude coaching <span class="pill" id="coach-pill">Off</span></div>
+        <div class="setting-help">After each take, Claude looks at one still frame and tells you what the shot reads as and the one thing to change. Your videos stay on your phone; only that one frame is sent. About 1 cent per take.</div>
+        <div id="coach-add">
+          <input id="coach-key" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste your Claude API key (sk-ant-…)">
+          <button class="btn grow" id="coach-save">Save and check key</button>
+          <p class="setting-help">Get one at console.anthropic.com → API keys. It's stored only on this phone.</p>
+        </div>
+        <div id="coach-have" hidden>
+          <div class="row gap">
+            <button class="btn grow" id="coach-test">Check key</button>
+            <button class="btn grow danger-btn" id="coach-remove">Remove key</button>
+          </div>
+        </div>
+        <p class="coach-status" id="coach-status" hidden></p>
       </div>
       <button class="btn primary big" id="settings-done">Done</button>
     </div>

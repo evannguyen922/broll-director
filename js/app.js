@@ -1,8 +1,9 @@
 import { ACTS, FRAME_LABEL, loadLibrary, makeShotList, swapShot, roomOf } from './shots.js';
-import { saveTake, listTakes, listTakeInfo, deleteTake, deleteProject, askToKeepStorage } from './store.js';
+import { saveTake, updateTake, listTakes, listTakeInfo, deleteTake, deleteProject, askToKeepStorage } from './store.js';
 import { speak, beep, unlockAudio, setVoiceEnabled, stopSpeaking } from './voice.js';
 import { loadFaceChecker, faceCheckerReady, findFaceInVideo } from './face.js';
 import { GRAY_W, frameStats, regionMean, globalShift, judgeTake, liveHint } from './checks.js';
+import { coachingOn, coachTake, getKey, setKey, testKey } from './coach.js';
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -100,6 +101,7 @@ function dotsFor(container, { interactive = false } = {}) {
 // ------------------------------------------------------------------ home
 function renderHome() {
   show('home');
+  updateSettingsLabels();
   $('examples').replaceChildren(...EXAMPLES.map((ex) =>
     h('button', { class: 'chip', onclick: () => { $('topic').value = ex; } }, ex)));
   const p = state.project;
@@ -406,7 +408,7 @@ function pickMime() {
 }
 
 let rec = null, chunks = [], samples = [], prevGray = null, tick = 0;
-let sampleTimer = null, stopTimer = null, thumbTimer = null, rafId = null, thumbBlob = null;
+let sampleTimer = null, stopTimer = null, thumbTimer = null, rafId = null, thumbBlob = null, frameBlob = null;
 
 function startRecording() {
   const shot = shotAt(state.current);
@@ -417,7 +419,7 @@ function startRecording() {
   } catch {
     rec = new MediaRecorder(state.stream);
   }
-  chunks = []; samples = []; prevGray = null; tick = 0; thumbBlob = null;
+  chunks = []; samples = []; prevGray = null; tick = 0; thumbBlob = null; frameBlob = null;
   motionSamples.length = 0;
   rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   rec.onstop = finishTake;
@@ -451,12 +453,19 @@ function startRecording() {
   tickUI();
 }
 
+// One frame from the middle of the take: a small one for the clip grid and
+// a sharper one for Claude to look at.
 function captureThumb() {
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!vw) return;
+  const big = document.createElement('canvas');
+  const scale = Math.min(1, 1024 / Math.max(vw, vh));
+  big.width = Math.round(vw * scale); big.height = Math.round(vh * scale);
+  big.getContext('2d').drawImage(video, 0, 0, big.width, big.height);
+  big.toBlob((b) => { frameBlob = b; }, 'image/jpeg', 0.85);
   const c = document.createElement('canvas');
   c.width = 360; c.height = Math.round(360 * vh / vw);
-  c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+  c.getContext('2d').drawImage(big, 0, 0, c.width, c.height);
   c.toBlob((b) => { thumbBlob = b; }, 'image/jpeg', 0.82);
 }
 
@@ -480,7 +489,7 @@ async function finishTake() {
   rec = null;
   if (!$('film').hidden || state.phase === 'stopping') {
     // give the thumbnail a moment if it is still being made
-    for (let i = 0; i < 10 && !thumbBlob; i++) await sleep(50);
+    for (let i = 0; i < 10 && !(thumbBlob && frameBlob); i++) await sleep(50);
   }
   if ($('film').hidden) { state.phase = 'idle'; return; } // left the screen mid-take
   if (!blob.size) {
@@ -507,18 +516,50 @@ async function finishTake() {
     createdAt: Date.now(),
     blob,
     thumb: thumbBlob,
+    frame: frameBlob,
     saved: false,
   };
   state.lastVerdict = verdict;
   if (verdict.ok) await keepPending();
   state.phase = 'review';
+  const coaching = coachingOn() && pending.frame;
+  pending.coachState = coaching ? 'thinking' : 'off';
   showReview(verdict);
-  speak(verdict.ok ? 'Good shot, saved.' : `Do it again. ${verdict.fix}`);
+  if (coaching) {
+    // Say the headline now; Claude's note follows when it arrives.
+    const headline = speak(verdict.ok ? 'Good shot, saved.' : 'Do it again.');
+    getCoaching(pending, shot, verdict, headline);
+  } else {
+    speak(verdict.ok ? 'Good shot, saved.' : `Do it again. ${verdict.fix}`);
+  }
+}
+
+async function getCoaching(take, shot, verdict, headline) {
+  let note = null, failure = null;
+  try {
+    note = await coachTake({ frame: take.frame, shot, actName: actOf(shot.act).name, verdict });
+  } catch (err) {
+    failure = err;
+  }
+  if (note) {
+    Object.assign(take, { coaching: note.coaching, readsAs: note.readsAs, coachState: 'done' });
+    if (take.saved) updateTake(take.id, { coaching: note.coaching, readsAs: note.readsAs }).catch(() => {});
+  } else {
+    Object.assign(take, { coachState: 'failed', coachError: failure?.message || "Claude coaching didn't work this time." });
+  }
+  if (pending !== take || $('review').hidden) return; // you already moved on
+  renderReviewState(verdict);
+  await headline;
+  if (pending !== take || $('review').hidden) return;
+  // If Claude couldn't help, you still hear what to fix.
+  if (note) speak(note.coaching);
+  else if (!verdict.ok) speak(verdict.fix);
 }
 
 async function keepPending() {
   try {
     await saveTake(pending);
+    if (pending.coaching) await updateTake(pending.id, { coaching: pending.coaching, readsAs: pending.readsAs });
     pending.saved = true;
     await refreshTakeInfo();
     dotsFor($('dots'), { interactive: true });
@@ -549,6 +590,14 @@ function renderReviewState(verdict) {
   title.textContent = keptAnyway ? 'Kept anyway' : verdict.title;
   title.className = `verdict-title ${verdict.ok ? 'good' : 'bad'}`;
   $('verdict-fix').textContent = verdict.fix;
+  const coach = $('coach');
+  const cs = pending.coachState;
+  coach.hidden = cs === 'off';
+  coach.className = `coach${cs === 'thinking' ? ' thinking' : cs === 'failed' ? ' failed' : ''}`;
+  $('coach-reads').textContent = cs === 'done' && pending.readsAs ? `Reads as ${pending.readsAs}` : '';
+  $('coach-line').textContent = cs === 'thinking' ? 'Looking at your take…'
+    : cs === 'done' ? pending.coaching
+      : cs === 'failed' ? pending.coachError : '';
   const remaining = firstUndone(state.current + 1);
   const nextLabel = remaining === -1 ? 'See my clips' : 'Next shot';
   const actions = $('review-actions');
@@ -591,6 +640,43 @@ function updateSettingsLabels() {
   $('voice-label').textContent = state.settings.voice ? 'on' : 'off';
   for (const b of $('seg-countdown').children) b.classList.toggle('on', Number(b.dataset.v) === state.settings.countdown);
   for (const b of $('seg-voice').children) b.classList.toggle('on', (b.dataset.v === 'on') === state.settings.voice);
+  const on = coachingOn();
+  $('coach-label').textContent = on ? 'on' : 'off';
+  $('home-coach').textContent = on ? 'on' : 'off, set it up';
+  $('coach-pill').textContent = on ? 'On' : 'Off';
+  $('coach-pill').classList.toggle('on', on);
+  $('coach-add').hidden = on;
+  $('coach-have').hidden = !on;
+}
+
+function coachStatus(text, kind) {
+  const el = $('coach-status');
+  el.hidden = !text;
+  el.textContent = text || '';
+  el.className = `coach-status${kind ? ` ${kind}` : ''}`;
+}
+
+async function saveCoachKey() {
+  const key = $('coach-key').value.trim();
+  if (!key) { coachStatus('Paste your key first.', 'bad'); return; }
+  if (!/^sk-ant-/.test(key)) { coachStatus("That doesn't look like a Claude API key. It starts with sk-ant-.", 'bad'); return; }
+  setKey(key);
+  $('coach-key').value = '';
+  await checkCoachKey();
+}
+
+async function checkCoachKey() {
+  coachStatus('Checking your key…');
+  const res = await testKey();
+  if (res.ok) coachStatus('Key works. Claude will coach you after each take.', 'good');
+  else coachStatus(res.message, 'bad');
+  updateSettingsLabels();
+}
+
+function openSettings() {
+  updateSettingsLabels();
+  coachStatus(null);
+  $('settings').hidden = false;
 }
 function setSetting(key, value) {
   state.settings[key] = value;
@@ -668,7 +754,9 @@ function openPlayer(take) {
   pv.src = playerUrl;
   pv.play().catch(() => {});
   $('player-where').textContent = `Shot ${take.shotIndex + 1} · ${actOf(take.act).name} · ${cap(take.place)} · ${take.feeling}`;
-  $('player-action').textContent = take.ok ? take.action : `${take.action} (Kept anyway: ${take.fix})`;
+  const lines = [take.ok ? take.action : `${take.action} (Kept anyway: ${take.fix})`];
+  if (take.coaching) lines.push(`Claude: ${take.readsAs ? `reads as ${take.readsAs}. ` : ''}${take.coaching}`);
+  $('player-action').textContent = lines.join('\n');
   $('player').hidden = false;
 }
 function closePlayer() {
@@ -731,7 +819,17 @@ function wire() {
   $('rec').onclick = onRecTap;
   $('flip').onclick = flipCamera;
   $('say').onclick = () => { unlockAudio(); speak(directionText(state.current)); };
-  $('open-settings').onclick = () => { if (state.phase === 'idle') { updateSettingsLabels(); $('settings').hidden = false; } };
+  $('open-settings').onclick = () => { if (state.phase === 'idle') openSettings(); };
+  $('home-settings').onclick = openSettings;
+  $('coach-save').onclick = saveCoachKey;
+  $('coach-key').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveCoachKey(); });
+  $('coach-test').onclick = checkCoachKey;
+  $('coach-remove').onclick = () => {
+    if (!confirm('Remove your Claude key from this phone? Coaching turns off.')) return;
+    setKey('');
+    coachStatus('Key removed. Coaching is off.');
+    updateSettingsLabels();
+  };
   $('settings-done').onclick = () => { $('settings').hidden = true; };
   $('settings').onclick = (e) => { if (e.target === $('settings')) $('settings').hidden = true; };
   for (const b of $('seg-countdown').children) b.onclick = () => setSetting('countdown', Number(b.dataset.v));

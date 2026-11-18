@@ -35,7 +35,8 @@ function tx(store, mode, fn) {
 const reqP = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 
 export async function saveTake(take) {
-  const { blob, thumb, ...rest } = take;
+  // Only plain facts + the video and thumbnail are stored (not the in-memory extras).
+  const { blob, thumb, frame, file, coachState, coachError, ...rest } = take;
   const record = {
     ...rest,
     video: await blob.arrayBuffer(),
@@ -62,6 +63,14 @@ export async function listTakes(projectId) {
 export async function listTakeInfo(projectId) {
   const rows = await tx('takes', 'readonly', (s) => reqP(s.index('project').getAll(projectId)));
   return (rows || []).map(({ video, thumb, ...r }) => r);
+}
+
+// Add a few fields (like Claude's note) to a saved take.
+export function updateTake(id, fields) {
+  return tx('takes', 'readwrite', (s) => {
+    const r = s.get(id);
+    r.onsuccess = () => { if (r.result) s.put({ ...r.result, ...fields }); };
+  });
 }
 
 export function deleteTake(id) {
