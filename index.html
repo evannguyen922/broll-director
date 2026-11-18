@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e1012">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="B-roll">
+  <meta name="description" content="Directs you shot by shot while you film b-roll for UGC videos.">
+  <title>B-roll director</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ============ Home ============ -->
+  <section class="screen" id="home" hidden>
+    <div class="scroll pad">
+      <header class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span>B-roll director</span>
+      </header>
+
+      <div id="resume" class="resume card" hidden>
+        <div class="eyebrow">Pick up where you left off</div>
+        <div class="resume-topic" id="resume-topic"></div>
+        <div class="resume-dots" id="resume-dots"></div>
+        <div class="row gap">
+          <button class="btn primary grow" id="resume-film">Keep filming</button>
+          <button class="btn grow" id="resume-clips">My clips</button>
+        </div>
+        <button class="link" id="resume-list">See the shot list</button>
+      </div>
+
+      <h1 class="hero">What's your video about?</h1>
+      <p class="sub">One line is enough. I'll plan 9 shots in 3 acts and talk you through each one.</p>
+      <textarea id="topic" rows="3" maxlength="200" placeholder="e.g. student who's always tired tries a new sleep routine"></textarea>
+      <div class="chips" id="examples"></div>
+      <button class="btn primary big" id="make">Make my shot list</button>
+      <p class="fine">Your clips stay on this phone. Nothing is uploaded.</p>
+    </div>
+  </section>
+
+  <!-- ============ Shot list ============ -->
+  <section class="screen" id="list" hidden>
+    <header class="bar">
+      <button class="icon-btn" id="list-back" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="bar-title">Your shot list</div>
+      <button class="text-btn" id="shuffle">Shuffle</button>
+    </header>
+    <div class="scroll pad with-footer">
+      <p class="topic-line" id="list-topic"></p>
+      <div id="acts"></div>
+    </div>
+    <footer class="footer">
+      <button class="btn primary big" id="start-film">Start filming</button>
+    </footer>
+  </section>
+
+  <!-- ============ Filming ============ -->
+  <section class="screen film" id="film" hidden>
+    <header class="film-top">
+      <button class="icon-btn" id="film-back" aria-label="Shot list">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      </button>
+      <div class="dots" id="dots" role="list" aria-label="Progress"></div>
+      <button class="icon-btn" id="film-clips" aria-label="My clips">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+      </button>
+    </header>
+
+    <article class="shot-card" id="shot-card">
+      <div class="shot-meta">
+        <button class="nav-btn" id="prev" aria-label="Previous shot"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="shot-where"><span id="shot-num"></span> · <span id="shot-act"></span> · <span id="shot-place"></span></div>
+        <button class="nav-btn" id="next" aria-label="Next shot"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <p class="shot-action" id="shot-action"></p>
+      <div class="shot-tags">
+        <span class="feel" id="shot-feel"></span>
+        <span class="tag" id="shot-hold"></span>
+        <span class="tag" id="shot-frame"></span>
+      </div>
+      <p class="shot-tip" id="shot-tip"></p>
+    </article>
+
+    <div class="cam">
+      <div class="cam-frame" id="cam-frame">
+        <video id="video" playsinline muted autoplay></video>
+        <div class="text-zone" id="text-zone"><span>Text goes here</span></div>
+        <div class="cam-msg" id="cam-msg" hidden></div>
+        <div class="hint" id="hint" hidden><i></i><span></span></div>
+        <div class="rec-badge" id="rec-badge" hidden><i></i><span id="rec-time">0.0</span></div>
+        <div class="count" id="count" hidden></div>
+        <div class="listen" id="listen" hidden>Listen…</div>
+      </div>
+    </div>
+
+    <footer class="controls">
+      <button class="round-btn" id="flip" aria-label="Switch camera">
+        <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9.5 13.5a2.5 2.5 0 0 0 4.6 1.4M14.5 12.5a2.5 2.5 0 0 0-4.6-1.4"/><path d="M14.4 15.2l-.3-1.3 1.3-.2M9.6 10.8l.3 1.3-1.3.2"/></svg>
+        <span>Flip</span>
+      </button>
+      <button class="rec" id="rec" aria-label="Record">
+        <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" class="ring-bg"/><circle cx="50" cy="50" r="46" class="ring-fg" id="ring-fg"/></svg>
+        <span class="rec-dot"></span>
+      </button>
+      <button class="round-btn" id="say" aria-label="Read it out loud">
+        <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+        <span>Read</span>
+      </button>
+    </footer>
+    <button class="settings-link" id="open-settings">Countdown <b id="cd-label">5s</b> · Voice <b id="voice-label">on</b></button>
+  </section>
+
+  <!-- ============ Review (after a take) ============ -->
+  <div class="sheet-wrap" id="review" hidden>
+    <div class="sheet review">
+      <div class="review-top">
+        <video id="review-video" playsinline muted loop autoplay></video>
+        <div class="verdict">
+          <div class="verdict-title" id="verdict-title"></div>
+          <p class="verdict-fix" id="verdict-fix"></p>
+        </div>
+      </div>
+      <ul class="checks" id="checks"></ul>
+      <div class="row gap" id="review-actions"></div>
+      <button class="link" id="review-extra"></button>
+    </div>
+  </div>
+
+  <!-- ============ Settings ============ -->
+  <div class="sheet-wrap" id="settings" hidden>
+    <div class="sheet">
+      <h2>Filming settings</h2>
+      <div class="setting">
+        <div>
+          <div class="setting-name">Countdown</div>
+          <div class="setting-help">Time to get in place after the direction is read out.</div>
+        </div>
+        <div class="seg" id="seg-countdown">
+          <button data-v="3">3s</button><button data-v="5">5s</button><button data-v="10">10s</button>
+        </div>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="setting-name">Read directions out loud</div>
+          <div class="setting-help">If you can't hear it, turn the volume up and check the silent switch.</div>
+        </div>
+        <div class="seg" id="seg-voice">
+          <button data-v="on">On</button><button data-v="off">Off</button>
+        </div>
+      </div>
+      <button class="btn primary big" id="settings-done">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ Clips ============ -->
+  <section class="screen" id="clips" hidden>
+    <header class="bar">
+      <button class="icon-btn" id="clips-back" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="bar-title">Your clips</div>
+      <span class="bar-spacer"></span>
+    </header>
+    <div class="scroll pad with-footer">
+      <p class="topic-line" id="clips-topic"></p>
+      <p class="note" id="clips-note">Clips live only in this app until you save them. Save them to your phone soon, then edit in CapCut.</p>
+      <div id="clip-groups"></div>
+      <div class="empty" id="clips-empty" hidden>
+        <p>No clips yet.</p>
+        <p class="muted">Film a shot and keep it, and it shows up here.</p>
+      </div>
+      <button class="link danger" id="new-video">Start a new video</button>
+    </div>
+    <footer class="footer">
+      <button class="btn primary big" id="save-all">Save all to my phone</button>
+    </footer>
+  </section>
+
+  <!-- ============ Player ============ -->
+  <div class="sheet-wrap player-wrap" id="player" hidden>
+    <div class="player">
+      <button class="icon-btn close" id="player-close" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <video id="player-video" playsinline controls loop></video>
+      <div class="player-info">
+        <div class="eyebrow" id="player-where"></div>
+        <p id="player-action"></p>
+      </div>
+      <div class="row gap">
+        <button class="btn primary grow" id="player-save">Save to my phone</button>
+        <button class="btn danger-btn" id="player-delete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <div class="rotate-msg">Turn your phone upright to film.</div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

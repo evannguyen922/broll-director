@@ -1,0 +1,11 @@
+{
+  "name": "broll-director-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "sh run.sh"
+  },
+  "devDependencies": {
+    "playwright": "1.48.2"
+  }
+}
