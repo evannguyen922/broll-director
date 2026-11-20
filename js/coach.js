@@ -60,7 +60,7 @@ export async function testKey() {
   }
 }
 
-const SYSTEM = `You are a warm, decisive film director coaching one person who is filming b-roll of themselves at home on an iPhone for a short UGC video (TikTok / Reels style, vertical 9:16). They will add text captions in the top part of the frame later.
+const SYSTEM = `You are a warm, decisive film director coaching one person who is filming b-roll of themselves at home on an iPhone for a short UGC video (TikTok / Reels style, vertical 9:16). They will add text captions in the middle of the frame later; the bottom fifth and the right edge get covered by the app's buttons.
 
 You get one still frame from the middle of their take, the shot they were going for, and the results of automatic checks the phone already ran.
 
@@ -73,6 +73,36 @@ Rules:
 - If the take already works, say so and give one small optional tweak, or tell them to keep it.
 - Judge only what you can see in the frame. A still can't show movement, so don't comment on motion or length unless a check flagged it.
 - Talk to them as "you". Never describe their appearance, body or attractiveness; only direct the performance and the shot.`;
+
+const TALK_SYSTEM = `You are a warm, decisive film director coaching one person who is filming themselves talking to camera at home on an iPhone for a short UGC video (TikTok / Reels style, vertical 9:16). Captions go in the middle of the frame; the bottom fifth and the right edge get covered by the app's buttons.
+
+You get one still frame from the middle of their take, what they were saying, and the results of automatic checks the phone already ran (eye line, face size, centring, phone at eye level, light, steadiness, length).
+
+Reply with:
+- reads_as: how they come across, in 1 to 3 plain words (for example "warm and easy", "a bit stiff", "low energy").
+- coaching: one or two short sentences, spoken aloud to them. Say how the take comes across, then give the single most useful thing to change on the next take. Concrete and physical: energy, eyes on the lens, posture, position, light, phone placement. Under 30 words. Plain everyday words, no film jargon, no lists, no emoji, sentence case.
+- background_depth: "has depth" if there is real space behind them (roughly 6 feet or more to the back wall, with something like a doorway, shelf or lamp behind them), or "flat wall" if they are right up against a plain wall.
+- move_out_of_shot: everyday clutter visible behind them that they should move out of shot, such as bins, shoes, bags, boxes, laundry, cables. Short plain names. Empty list if none.
+- do_not_film: anything visible that they probably don't want on camera, such as pajama pants, a messy unmade bed, personal papers or a screen with private details. Short plain names with what to do, for example "pajama pants: film from the waist up". Empty list if none.
+
+Rules:
+- If an automatic check failed, the thing to change must fix that problem, said your way.
+- If the take already works, say so and give one small optional tweak.
+- Judge only what you can see in the frame. A still can't show movement or voice, so don't comment on those.
+- Talk to them as "you". Never describe their appearance, body or attractiveness; only direct the performance, the framing and the room.`;
+
+const TALK_SCHEMA = {
+  type: 'object',
+  properties: {
+    reads_as: { type: 'string', description: 'How they come across, 1 to 3 words' },
+    coaching: { type: 'string', description: 'One or two short spoken sentences, under 30 words' },
+    background_depth: { type: 'string', enum: ['has depth', 'flat wall'] },
+    move_out_of_shot: { type: 'array', items: { type: 'string' } },
+    do_not_film: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['reads_as', 'coaching', 'background_depth', 'move_out_of_shot', 'do_not_film'],
+  additionalProperties: false,
+};
 
 const SCHEMA = {
   type: 'object',
@@ -88,11 +118,26 @@ function describe({ shot, actName, verdict }) {
   const checks = verdict.checks
     .map((c) => `- ${c.label}: ${c.status === 'pass' ? 'passed' : c.status === 'fail' ? `FAILED (${c.msg || c.note})` : `not checked (${c.note})`}`)
     .join('\n');
+  if (shot.kind === 'talk') {
+    return `Talking-to-camera take: ${shot.role === 'hook' ? 'the hook, the very first sentence of the video (should be fast, high energy, no pauses)' : 'part of the video'}.
+- What they were saying: ${shot.say || shot.action}
+- Energy it should have: ${shot.feeling}
+
+Automatic checks on this take:
+${checks}
+
+Overall: ${verdict.ok ? 'the phone accepted this take' : 'the phone asked them to do it again'}.`;
+  }
+  return describeBroll({ shot, actName, verdict, checks });
+}
+
+function describeBroll({ shot, actName, verdict, checks }) {
   return `The shot (act: ${actName}):
 - Place: ${shot.place}
 - Direction: ${shot.action}
 - Feeling it should read as: ${shot.feeling}
-- Shot size: ${shot.frame === 'detail' ? 'close up on hands, face not needed' : shot.frame === 'wide' ? 'wide, whole body and room' : shot.frame === 'close' ? 'close up on face' : 'waist up'}
+- Kind of shot: ${shot.style || 'person'}${shot.line ? `\n- Script line it illustrates (a 0.5-1 second cutaway): ${shot.line}` : ''}
+- Shot size: ${shot.frame === 'detail' ? 'close up, face not needed' : shot.frame === 'wide' ? 'wide, whole body and room' : shot.frame === 'close' ? 'close up on face' : 'waist up'}
 
 Automatic checks on this take:
 ${checks}
@@ -109,10 +154,11 @@ export function blobToBase64(blob) {
   });
 }
 
-// Returns { readsAs, coaching }. Throws CoachError with a plain message.
+// Returns { readsAs, coaching, background? }. Throws CoachError with a plain message.
 export async function coachTake({ frame, shot, actName, verdict }) {
   try {
     const c = await client();
+    const talk = shot.kind === 'talk';
     const data = await blobToBase64(frame);
     const response = await c.beta.messages.create({
       model: MODEL,
@@ -121,8 +167,8 @@ export async function coachTake({ frame, shot, actName, verdict }) {
       // fallback model automatically.
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
-      system: SYSTEM,
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: talk ? TALK_SCHEMA : SCHEMA } },
+      system: talk ? TALK_SYSTEM : SYSTEM,
       messages: [{
         role: 'user',
         content: [
@@ -135,7 +181,12 @@ export async function coachTake({ frame, shot, actName, verdict }) {
     const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
     const out = JSON.parse(text);
     if (!out.coaching) throw new CoachError('empty', "Claude didn't have a note this time.");
-    return { readsAs: String(out.reads_as || '').trim(), coaching: String(out.coaching).trim() };
+    const note = { readsAs: String(out.reads_as || '').trim(), coaching: String(out.coaching).trim() };
+    if (talk) {
+      const list = (v) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean).slice(0, 5) : []);
+      note.background = { depth: out.background_depth === 'flat wall' ? 'flat wall' : 'has depth', move: list(out.move_out_of_shot), avoid: list(out.do_not_film) };
+    }
+    return note;
   } catch (err) {
     console.warn('Coaching failed', err);
     throw explain(err);

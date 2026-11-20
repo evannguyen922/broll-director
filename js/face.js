@@ -62,6 +62,8 @@ export function findFaceInVideo(video) {
       return {
         found: true, top, bottom, height,
         left: X(f.left), right: X(f.right), cx: X(f.cx),
+        width: X(f.right) - X(f.left),
+        eyeY: Y(f.eyeY), noseX: X(f.noseX),
         headTop: top - height * 0.3,
       };
     }
@@ -83,6 +85,10 @@ export function findFace(canvas) {
     if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
   }
   const height = maxY - minY; // forehead to chin
+  // Corners of both eyes (MediaPipe face mesh points 33, 133, 362, 263) and the nose tip (1).
+  const eyes = [33, 133, 362, 263].map((i) => pts[i]).filter(Boolean);
+  const eyeY = eyes.length ? eyes.reduce((a, p) => a + p.y, 0) / eyes.length : minY + height * 0.4;
+  const noseX = pts[1] ? pts[1].x : (minX + maxX) / 2;
   return {
     found: true,
     top: minY,
@@ -90,6 +96,9 @@ export function findFace(canvas) {
     left: minX,
     right: maxX,
     height,
+    width: maxX - minX,
+    eyeY,
+    noseX,
     // The face mesh stops at the forehead; the top of the head is roughly
     // a third of a face-height higher.
     headTop: minY - height * 0.3,

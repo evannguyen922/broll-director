@@ -3,6 +3,14 @@
 let enabled = true;
 let audioCtx;
 let voice;
+let audioMode = 'playback';
+
+// 'playback' for b-roll (loudest voice), 'play-and-record' while the
+// microphone is on for talking-to-camera takes.
+export function setAudioMode(m) {
+  audioMode = m;
+  try { if (navigator.audioSession) navigator.audioSession.type = m; } catch { /* older Safari */ }
+}
 
 export function setVoiceEnabled(on) { enabled = on; if (!on) stopSpeaking(); }
 
@@ -26,7 +34,7 @@ export function unlockAudio() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    if (navigator.audioSession) navigator.audioSession.type = audioMode;
   } catch { /* no sound, no problem */ }
 }
 

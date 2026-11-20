@@ -35,10 +35,19 @@
         <button class="link" id="resume-list">See the shot list</button>
       </div>
 
+      <div class="seg wide" id="home-mode" role="group" aria-label="What are you filming?">
+        <button data-v="broll">B-roll</button><button data-v="talking">Talking to camera</button>
+      </div>
       <h1 class="hero">What's your video about?</h1>
-      <p class="sub">One line is enough. I'll plan 9 shots in 3 acts and talk you through each one.</p>
+      <p class="sub" id="home-sub">One line is enough. I'll plan 9 shots in 3 acts and talk you through each one.</p>
       <textarea id="topic" rows="3" maxlength="200" placeholder="e.g. student who's always tired tries a new sleep routine"></textarea>
       <div class="chips" id="examples"></div>
+      <button class="link left" id="add-script">Have a script? Paste it (optional)</button>
+      <div id="script-wrap" hidden>
+        <label class="field-label" for="script">Your script</label>
+        <textarea id="script" rows="6" maxlength="4000" placeholder="One sentence per line. The first line is your hook."></textarea>
+        <p class="setting-help" id="script-help"></p>
+      </div>
       <button class="btn primary big" id="make">Make my shot list</button>
       <p class="fine">Your videos stay on this phone.</p>
       <button class="link" id="home-settings">Claude coaching: <span id="home-coach">off</span></button>
@@ -55,7 +64,11 @@
       <button class="text-btn" id="shuffle">Shuffle</button>
     </header>
     <div class="scroll pad with-footer">
+      <div class="seg wide" id="list-mode" role="group" aria-label="Which list">
+        <button data-v="broll">B-roll</button><button data-v="talking">Talking to camera</button>
+      </div>
       <p class="topic-line" id="list-topic"></p>
+      <p class="note" id="list-note"></p>
       <div id="acts"></div>
     </div>
     <footer class="footer">
@@ -81,6 +94,7 @@
         <div class="shot-where"><span id="shot-num"></span> · <span id="shot-act"></span> · <span id="shot-place"></span></div>
         <button class="nav-btn" id="next" aria-label="Next shot"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
       </div>
+      <p class="shot-line" id="shot-line" hidden></p>
       <p class="shot-action" id="shot-action"></p>
       <div class="shot-tags">
         <span class="feel" id="shot-feel"></span>
@@ -93,7 +107,15 @@
     <div class="cam">
       <div class="cam-frame" id="cam-frame">
         <video id="video" playsinline muted autoplay></video>
-        <div class="text-zone" id="text-zone"><span>Text goes here</span></div>
+        <div class="guides" id="guides" aria-hidden="true">
+          <div class="grid3" id="grid" hidden><i></i><i></i><i></i><i></i></div>
+          <div class="dz dz-top" id="dz-top"><span>App bar</span></div>
+          <div class="dz dz-right" id="dz-right"><span>Buttons</span></div>
+          <div class="dz dz-bottom" id="dz-bottom"><span>Captions and buttons · <b id="dz-name">TikTok (approx.)</b></span></div>
+          <div class="text-box" id="text-box"><span>Text goes here</span></div>
+          <div class="text-box title-box" id="title-box" hidden><span>Title</span></div>
+          <div class="eye-line" id="eye-line" hidden><span>Eyes here</span></div>
+        </div>
         <div class="cam-msg" id="cam-msg" hidden></div>
         <div class="hint" id="hint" hidden><i></i><span></span></div>
         <div class="rec-badge" id="rec-badge" hidden><i></i><span id="rec-time">0.0</span></div>
@@ -123,9 +145,13 @@
       </button>
     </footer>
     <div class="film-foot">
-      <button class="foot-btn" id="from-photos">
+      <button class="foot-btn" id="from-photos" aria-label="Use a clip from my Photos">
         <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="9.5" r="1.5"/></svg>
-        Use a clip from my Photos
+        From my Photos
+      </button>
+      <button class="foot-btn" id="open-guides">
+        <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M5 7h14M5 17h14M15.5 7v10"/></svg>
+        Guides
       </button>
       <button class="foot-btn icon-only" id="open-settings" aria-label="Settings">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -149,9 +175,14 @@
           </div>
         </div>
       </div>
+      <div class="bg-check" id="bg-check" hidden></div>
       <ul class="checks" id="checks"></ul>
       <p class="review-quality" id="review-quality"></p>
       <div class="row gap" id="review-actions"></div>
+      <button class="btn save-photos" id="rv-save">
+        <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>
+        Save to Photos
+      </button>
       <button class="link" id="review-extra"></button>
     </div>
   </div>
@@ -189,6 +220,66 @@
     </div>
   </div>
 
+  <!-- ============ Guides (overlays on the preview) ============ -->
+  <div class="sheet-wrap" id="guides-sheet" hidden>
+    <div class="sheet">
+      <h2>Guides on the camera</h2>
+      <div class="setting">
+        <div>
+          <div class="setting-name">Danger zones</div>
+          <div class="setting-help">Where the app's buttons and captions cover your video. Keep your face and text out of them.</div>
+        </div>
+        <div class="seg" id="seg-zones"><button data-v="on">On</button><button data-v="off">Off</button></div>
+      </div>
+      <div class="setting stack">
+        <div class="setting-name">Posting to</div>
+        <div class="seg wide" id="seg-platform"><button data-v="tiktok">TikTok</button><button data-v="reels">Reels</button><button data-v="shorts">Shorts</button></div>
+        <div class="setting-help" id="guides-zone-help"></div>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="setting-name">Text box</div>
+          <div class="setting-help">Shows where your text goes: the middle of the frame.</div>
+        </div>
+        <div class="seg" id="seg-textbox"><button data-v="on">On</button><button data-v="off">Off</button></div>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="setting-name">Eye line</div>
+          <div class="setting-help">Talking to camera: where your eyes go, a third of the way down.</div>
+        </div>
+        <div class="seg" id="seg-eyeline"><button data-v="on">On</button><button data-v="off">Off</button></div>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="setting-name">Title above my head</div>
+          <div class="setting-help">Talking to camera: frames you looser, eyes about 40% down, so a title or picture fits above your head.</div>
+        </div>
+        <div class="seg" id="seg-title"><button data-v="on">On</button><button data-v="off">Off</button></div>
+      </div>
+      <div class="setting">
+        <div>
+          <div class="setting-name">Thirds grid</div>
+        </div>
+        <div class="seg" id="seg-grid"><button data-v="on">On</button><button data-v="off">Off</button></div>
+      </div>
+      <button class="btn primary big" id="guides-done">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ Save one at a time ============ -->
+  <div class="sheet-wrap" id="save-queue" hidden>
+    <div class="sheet">
+      <h2 id="queue-title">Save one at a time</h2>
+      <p class="sub" id="queue-help"></p>
+      <button class="btn primary big" id="queue-next">Save clip 1</button>
+      <div class="row gap queue-row">
+        <button class="btn grow" id="queue-skip">Skip this one</button>
+        <button class="btn grow" id="queue-done">Stop</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ Clips ============ -->
   <section class="screen" id="clips" hidden>
     <header class="bar">
@@ -196,20 +287,42 @@
         <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
       <div class="bar-title">Your clips</div>
-      <span class="bar-spacer"></span>
+      <button class="text-btn" id="clips-plan">Edit plan</button>
     </header>
     <div class="scroll pad with-footer">
       <p class="topic-line" id="clips-topic"></p>
-      <p class="note" id="clips-note">Clips live only in this app until you save them. Save them to your phone soon, then edit in CapCut.</p>
+      <p class="note" id="clips-note">Clips live only in this app until you save them. Tap Save to Photos, then pick <b>Save Video</b> in the share sheet. Then follow your edit plan in CapCut.</p>
       <div id="clip-groups"></div>
       <div class="empty" id="clips-empty" hidden>
         <p>No clips yet.</p>
         <p class="muted">Film a shot and keep it, and it shows up here.</p>
       </div>
+      <button class="btn big plan-btn" id="open-plan">Next: your edit plan</button>
       <button class="link danger" id="new-video">Start a new video</button>
     </div>
     <footer class="footer">
-      <button class="btn primary big" id="save-all">Save all to my phone</button>
+      <button class="btn primary big" id="save-all">Save all to Photos</button>
+    </footer>
+  </section>
+
+  <!-- ============ Edit plan ============ -->
+  <section class="screen" id="plan" hidden>
+    <header class="bar">
+      <button class="icon-btn" id="plan-back" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="bar-title">Edit plan</div>
+      <span class="bar-spacer"></span>
+    </header>
+    <div class="scroll pad with-footer">
+      <p class="sub">A checklist for editing in CapCut. Your ticks are saved on this phone.</p>
+      <h3 class="plan-h">Your clips, in order</h3>
+      <ol class="plan-clips" id="plan-clips"></ol>
+      <div class="plan-head"><h3 class="plan-h">Checklist</h3><span class="plan-progress" id="plan-progress"></span></div>
+      <div id="plan-list"></div>
+    </div>
+    <footer class="footer">
+      <button class="btn primary big" id="plan-save-all">Save these clips to Photos</button>
     </footer>
   </section>
 
@@ -226,7 +339,7 @@
         <p id="player-action"></p>
       </div>
       <div class="row gap">
-        <button class="btn primary grow" id="player-save">Save to my phone</button>
+        <button class="btn primary grow" id="player-save">Save to Photos</button>
         <button class="btn danger-btn" id="player-delete">Delete</button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import fs from 'fs';
 const FEEDS = new URL('./.work/feeds/', import.meta.url).pathname;
 const OUT = new URL('./.work/screens/', import.meta.url).pathname;
@@ -9,11 +9,25 @@ const pick = (...ids) => ids.map((id) => lib.shots.find((s) => s.id === id));
 const results = [];
 const ok = (name, pass, detail = '') => { results.push({ name, pass, detail }); console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); };
 
+// Stand-in for the iPhone share sheet: records what would be shared.
+// __shareMode: 'all' (several files at once), 'single' (one at a time), 'none' (no share sheet).
+const shareStub = () => {
+  window.__shared = [];
+  window.__shareMode = 'all';
+  const files = (d) => (d && d.files) || [];
+  navigator.canShare = (d) => window.__shareMode === 'all' || (window.__shareMode === 'single' && files(d).length === 1);
+  navigator.share = async (d) => {
+    if (!navigator.canShare(d)) throw new DOMException('Not allowed', 'NotAllowedError');
+    window.__shared.push(files(d).map((f) => ({ name: f.name, type: f.type, size: f.size })));
+  };
+};
+
 async function open(feed, init) {
   const browser = await chromium.launch({
     args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-video-capture=${FEEDS}${feed}.mjpeg`, '--autoplay-policy=no-user-gesture-required'],
   });
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await ctx.addInitScript(shareStub);
   if (init) await ctx.addInitScript(init.fn, init.arg);
   const page = await ctx.newPage();
   const errors = [];
@@ -52,6 +66,11 @@ async function readReview(page) {
   ok('Shot list has 9 shots', list.length === 9, '');
   ok('3 per act', ['struggle', 'grind', 'win'].every((a) => list.filter((l) => l.startsWith(a)).length === 3));
   console.log(list.map((l) => '   ' + l).join('\n'));
+  const mix = await page.evaluate(() => { const s = window.brollDirector.state.project.lists.broll; return { faceless: s.filter((x) => !x.face).length, first: s[0].style, styles: [...new Set(s.map((x) => x.style))] }; });
+  ok('55-75% of shots are without your face', mix.faceless >= 5 && mix.faceless <= 7, `${mix.faceless} of 9 faceless`);
+  ok('Shot 1 is a visual hook, and shots come in different kinds', mix.first === 'visual-hook' && mix.styles.length >= 5, mix.styles.join(', '));
+  ok('Each card says which kind of shot it is', /Visual hook/.test(await page.textContent('.shot >> nth=0')));
+  ok('Default hold is 5 s', await page.evaluate(() => window.brollDirector.state.project.lists.broll.every((s) => s.hold === 5)));
   await page.screenshot({ path: `${OUT}02-list.png` });
   const before = await page.textContent('.shot:nth-of-type(1) p');
   await page.click('.act >> nth=0 >> .swap >> nth=0');
@@ -61,7 +80,27 @@ async function readReview(page) {
   await page.waitForSelector('#film:not([hidden])');
   await page.waitForFunction(() => document.querySelector('#cam-msg').hidden && document.querySelector('#video').videoWidth > 0, null, { timeout: 20000 });
   ok('Camera preview starts', await page.evaluate(() => document.querySelector('#video').videoWidth > 0));
-  const shot = await page.evaluate(() => window.brollDirector.state.project.shots[0]);
+  // Danger zones and the text box on the preview
+  const zoneBox = () => page.evaluate(() => {
+    const f = document.querySelector('#cam-frame').getBoundingClientRect();
+    const r = (id) => { const e = document.getElementById(id); if (e.hidden) return null; const b = e.getBoundingClientRect(); return { top: (b.top - f.top) / f.height, h: b.height / f.height, w: b.width / f.width }; };
+    return { top: r('dz-top'), bottom: r('dz-bottom'), right: r('dz-right'), text: r('text-box'), label: document.querySelector('#dz-name').textContent };
+  });
+  const z1 = await zoneBox();
+  ok('Danger zones show on the preview (TikTok: top 8%, bottom 22%, right 12%)', z1.top && Math.abs(z1.top.h - 0.08) < 0.01 && Math.abs(z1.bottom.h - 0.22) < 0.01 && Math.abs(z1.right.w - 0.12) < 0.01 && /approx/.test(z1.label), JSON.stringify(z1.label));
+  ok('Text box sits in the middle, clear of the zones', z1.text && z1.text.top > 0.4 && z1.text.top + z1.text.h < 0.78);
+  await page.click('#open-guides');
+  await page.click('#seg-platform button[data-v=shorts]');
+  const z2 = await zoneBox();
+  await page.click('#seg-zones button[data-v=off]');
+  const z3 = await zoneBox();
+  await page.screenshot({ path: `${OUT}03b-guides.png` });
+  await page.click('#seg-zones button[data-v=on]');
+  await page.click('#seg-platform button[data-v=tiktok]');
+  await page.click('#guides-done');
+  ok('Picking Shorts changes the zones', Math.abs(z2.bottom.h - 0.24) < 0.01 && /Shorts/.test(z2.label), z2.label);
+  ok('Danger zones can be turned off and on', z3.top === null && z3.bottom === null && z3.text !== null);
+  const shot = await page.evaluate(() => window.brollDirector.state.project.lists.broll[0]);
   if (shot.frame !== 'detail') {
     const hint = await waitFaceReady(page).catch(() => 'no hint');
     console.log('   live hint before recording:', hint);
@@ -83,13 +122,16 @@ async function readReview(page) {
   ok('Review appears after the take', !!rv.title);
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${OUT}06-review.png` });
+  await page.click('#rv-save');
+  const shared1 = await page.evaluate(() => window.__shared.at(-1));
+  ok('Save to Photos after a take opens the share sheet with one MP4 file', shared1?.length === 1 && /\.mp4$/.test(shared1[0].name) && /mp4/.test(shared1[0].type) && shared1[0].size > 1000, JSON.stringify(shared1));
   if (/Do it again/.test(rv.title)) { await page.click('#rv-keep'); await page.waitForTimeout(500); }
   const dotsDone = await page.$$eval('#dots .dot.done', (d) => d.length);
   ok('Progress dot fills after a kept take', dotsDone === 1, `${dotsDone} done`);
   await page.click('#rv-next');
   await page.waitForTimeout(500);
   const cur = await page.textContent('#shot-num');
-  ok('Next shot moves on', cur.startsWith('2 of 9'), cur);
+  ok('Next shot moves on', /^Shot 2 of 9/.test(cur), cur);
   // record a second shot quickly (keep anyway if flagged)
   await page.click('#rec');
   const rv2 = await readReview(page);
@@ -103,8 +145,50 @@ async function readReview(page) {
   const tiles = await page.$$eval('.clip', (els) => els.map((e) => e.querySelector('.mood').textContent));
   const rooms = await page.$$eval('.room', (els) => els.map((e) => e.textContent));
   ok('Clips grid shows both kept clips with mood labels', tiles.length === 2, `${tiles.join(', ')} | rooms: ${rooms.join(', ')}`);
-  const names = await page.evaluate(() => [...document.querySelectorAll('.clip')].length);
   await page.screenshot({ path: `${OUT}07-clips.png` });
+  ok('Every clip in the grid has its own Save to Photos button', (await page.$$('.tile-save')).length === 2);
+  await page.click('#save-all');
+  const sharedAll = await page.evaluate(() => window.__shared.at(-1));
+  ok('Save all shares every clip in one go when Safari allows it', sharedAll?.length === 2 && sharedAll.every((f) => /\.mp4$/.test(f.name)), sharedAll?.map((f) => f.name).join(', '));
+  await page.evaluate(() => { window.__shareMode = 'single'; });
+  await page.click('#save-all');
+  await page.waitForSelector('#save-queue:not([hidden])');
+  const q1 = await page.textContent('#queue-next');
+  await page.click('#queue-next');
+  await page.click('#queue-next');
+  const qDone = await page.textContent('#queue-title');
+  const singles = await page.evaluate(() => window.__shared.slice(-2).map((x) => x.length));
+  await page.click('#queue-done');
+  ok('Otherwise it saves one at a time, a tap per clip', q1 === 'Save clip 1 of 2' && qDone === 'All saved' && singles.join() === '1,1', `${q1} -> ${qDone}`);
+  await page.evaluate(() => { window.__shareMode = 'none'; });
+  const dl = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+  await page.click('.tile-save >> nth=0');
+  const download = await dl;
+  const toastText = await page.textContent('#toast');
+  ok('Without a share sheet it downloads and says it lands in the Files app', !!download && /Files app/.test(toastText), `${download?.suggestedFilename()} | ${toastText}`);
+  await page.evaluate(() => { window.__shareMode = 'all'; });
+  // Edit plan
+  await page.click('#open-plan');
+  await page.waitForSelector('#plan:not([hidden])');
+  const plan = await page.evaluate(() => ({
+    rows: [...document.querySelectorAll('.plan-clip')].map((r) => r.querySelector('.plan-label').textContent + (r.classList.contains('missing') ? ' (not filmed)' : '')),
+    items: [...document.querySelectorAll('#plan-list .tick-text')].map((t) => t.textContent),
+  }));
+  console.log('   plan:', plan.rows.slice(0, 3).join(' / '));
+  ok('Edit plan lists the clips in order', plan.rows.length === 9 && /Visual hook/.test(plan.rows[0]) && plan.rows.filter((r) => !/not filmed/.test(r)).length === 2, `${plan.rows.length} rows`);
+  const want = [/hook as text in the middle/, /under 2 seconds/, /every 1–3 seconds.*110–120%/, /Cut every 1–2 seconds/, /transcript.*breaths/, /1–3 words/, /same caption font/i, /danger zones/, /under 10 seconds/, /under 60 seconds.*1:00/, /quotable/, /loop back/, /Music low/, /ending clip/, /1080 × 1920/];
+  const missing = want.filter((re) => !plan.items.some((t) => re.test(t)));
+  ok('Edit plan has every checklist item', missing.length === 0, missing.length ? `missing ${missing.join(' ')}` : `${plan.items.length} tick boxes`);
+  await page.click('#plan-list .tick >> nth=0');
+  await page.click('#plan-list .tick >> nth=3');
+  await page.screenshot({ path: `${OUT}07b-plan.png`, fullPage: true });
+  await page.click('#plan-back');
+  await page.waitForSelector('#clips:not([hidden])');
+  await page.click('#clips-plan');
+  const kept = await page.evaluate(() => ({ n: document.querySelectorAll('#plan-list input:checked').length, p: document.querySelector('#plan-progress').textContent }));
+  ok('Edit plan ticks are saved on the phone', kept.n === 2, kept.p);
+  await page.click('#plan-back');
+  await page.waitForSelector('#clips:not([hidden])');
   await page.click('.clip >> nth=0');
   await page.waitForSelector('#player:not([hidden])');
   await page.waitForFunction(() => document.querySelector('#player-video').readyState >= 1, null, { timeout: 10000 });
@@ -118,6 +202,15 @@ async function readReview(page) {
     return t.map((x) => `${x.blob.type} ${(x.blob.size / 1024).toFixed(0)}KB`);
   });
   ok('Clips saved in IndexedDB', fileNames.length === 2, fileNames.join(', '));
+  const prefers = await page.evaluate(() => {
+    const real = MediaRecorder.isTypeSupported;
+    MediaRecorder.isTypeSupported = () => true;
+    const r = [window.brollDirector.pickMime(false), window.brollDirector.pickMime(true)];
+    MediaRecorder.isTypeSupported = real;
+    return r;
+  });
+  ok('The recorder asks for MP4 with H.264 first (what Photos accepts)', prefers[0] === 'video/mp4;codecs=avc1' && prefers[1] === 'video/mp4;codecs=avc1,mp4a.40.2', prefers.join(' | '));
+  console.log(`   (this test browser recorded ${fileNames[0].split(' ')[0]}: open-source Chromium has no H.264 encoder; Safari's engine is checked at the end)`);
   // reload: everything still there
   await page.reload();
   await page.waitForSelector('#resume:not([hidden])');
@@ -133,7 +226,7 @@ const project = { id: 'ptest', topic: 'test', shuffle: 0, shots: pick('s1', 's2'
 const init = { fn: (p) => { localStorage.setItem('broll.project', JSON.stringify(p)); localStorage.setItem('broll.settings', JSON.stringify({ voice: false })); }, arg: project };
 const scenarios = [
   { feed: 'good', expect: /Good shot, saved/, fixRe: /./, name: 'Well framed take is accepted' },
-  { feed: 'tight', expect: /Do it again/, fixRe: /Too tight, no room above your head for text, step back/, name: 'Too tight / no headroom is caught' },
+  { feed: 'tight', expect: /Do it again/, fixRe: /Too tight, no room above your head, step back a little/, name: 'Too tight / no headroom is caught' },
   { feed: 'dark', expect: /Do it again/, fixRe: /Too dark/, name: 'Too dark is caught' },
   { feed: 'shaky', expect: /Do it again/, fixRe: /Too shaky/, name: 'Shaky camera is caught' },
   { feed: 'good', expect: /Do it again/, fixRe: /Too short/, name: 'Stopping early is caught', stopAfter: 2000 },
@@ -223,6 +316,127 @@ for (const cc of clipCases) {
   await browser.close();
 }
 
+// ---------- 2d. Script: say it, show it ----------
+const SCRIPT = "I paid off $8,000 in six months.\nI was always broke by the 20th.\nI started tracking every coffee.\nThen I moved money to savings on payday.\nNow I actually sleep at night.";
+{
+  const { browser, page, errors } = await open('good');
+  await page.waitForSelector('#home:not([hidden])');
+  await page.fill('#topic', 'paying off my credit card');
+  await page.click('#add-script');
+  await page.fill('#script', SCRIPT);
+  await page.click('#make');
+  await page.waitForSelector('#list:not([hidden])');
+  const cut = await page.$$eval('.shot', (els) => els.map((e) => `${e.querySelector('.line')?.textContent} -> ${e.querySelectorAll('p')[1].textContent}`));
+  console.log(cut.map((l) => '   ' + l).join('\n'));
+  ok('Script makes one cutaway per line (say it, show it)', cut.length === 5 && cut.every((c, i) => c.startsWith(`Line ${i + 1}:`)), `${cut.length} cutaways`);
+  ok('Cutaways say to use 0.5-1 s of each', (await page.$$eval('.shot .tag', (t) => t.filter((x) => /0\.5–1 s/.test(x.textContent)).length)) === 5);
+  await page.screenshot({ path: `${OUT}15-script-cutaways.png`, fullPage: true });
+  if (errors.length) ok('No page errors (script)', false, errors.slice(0, 3).join(' | '));
+  await browser.close();
+}
+
+// ---------- 2e. Talking to camera ----------
+{
+  const { browser, page, errors } = await open('talk', { fn: () => localStorage.setItem('broll.settings', JSON.stringify({ voice: false })) });
+  await page.waitForSelector('#home:not([hidden])');
+  await page.click('#home-mode button[data-v=talking]');
+  await page.fill('#topic', 'paying off my credit card');
+  await page.click('#add-script');
+  await page.fill('#script', SCRIPT);
+  await page.click('#make');
+  await page.waitForSelector('#list:not([hidden])');
+  const takes = await page.$$eval('.shot', (els) => els.map((e) => e.innerText.replace(/\n+/g, ' | ')));
+  console.log(takes.map((l) => '   ' + l.slice(0, 150)).join('\n'));
+  ok('Talking takes: hook is filmed last, with the reason why', /The hook/.test(takes.at(-1)) && /voice is warmed up/.test(takes.at(-1)) && takes.length === 5, `${takes.length} takes`);
+  ok('Talking tips are on every card', takes.every((t) => /FaceTiming a friend/.test(t) && /first sentence fast/.test(t) && /no pauses/.test(t)));
+  await page.screenshot({ path: `${OUT}16-talk-list.png`, fullPage: true });
+  await page.click('#start-film');
+  await page.waitForFunction(() => document.querySelector('#cam-msg').hidden && document.querySelector('#video').videoWidth > 0, null, { timeout: 20000 });
+  const hint = await waitFaceReady(page).catch(() => 'no hint');
+  const live = await page.evaluate(() => ({
+    mic: window.brollDirector.state.stream.getAudioTracks().length,
+    eye: !document.querySelector('#eye-line').hidden && document.querySelector('#eye-line').style.top,
+  }));
+  ok('Talking to camera records your voice too', live.mic === 1);
+  ok('Eye line guide sits a third of the way down', /33\.3/.test(live.eye), live.eye);
+  ok('Live hint on a well-framed talking shot', /look good/.test(hint), hint);
+  await page.screenshot({ path: `${OUT}17-talk-film.png` });
+  await page.click('#rec');
+  await page.waitForSelector('#listen:not([hidden])', { timeout: 5000 });
+  const breath = await page.textContent('#listen');
+  await page.waitForSelector('#count:not([hidden])', { timeout: 8000 });
+  const count = await page.textContent('#count');
+  ok('Before a talking take: "Take a deep breath", then 3-2-1', /Take a deep breath/.test(breath) && count === '3', `${breath} then ${count}`);
+  await page.waitForSelector('#rec-badge:not([hidden])', { timeout: 8000 });
+  const hold = await page.evaluate(() => window.brollDirector.state.project.lists.talking[0].hold);
+  await page.waitForTimeout(hold * 1000 + 1500);
+  ok('Talking takes keep recording until you tap stop', await page.evaluate(() => !document.querySelector('#rec-badge').hidden));
+  await page.click('#rec');
+  const rv = await readReview(page);
+  console.log('   talking take:', JSON.stringify(rv));
+  ok('Well-framed talking take is accepted', /Good shot, saved/.test(rv.title), `${rv.title}: ${rv.fix}`);
+  ok('Talking take is checked for eye level too', rv.checks.some((c) => /Eye level/.test(c)), rv.checks.join(' ; '));
+  const bg = await page.evaluate(() => ({ shown: !document.querySelector('#bg-check').hidden, ticks: [...document.querySelectorAll('#bg-check .tick-text')].map((t) => t.textContent) }));
+  ok('Without a Claude key, the background is a quick checklist', bg.shown && bg.ticks.length === 4 && /6 feet/.test(bg.ticks[0]) && /pajama/.test(bg.ticks[3]), bg.ticks.join(' | '));
+  const type = await page.evaluate(() => window.brollDirector.pendingFile?.type);
+  await page.click('#rv-save');
+  const shared = await page.evaluate(() => window.__shared.at(-1));
+  ok('Talking take is recorded with sound and saves to Photos as an .mp4', /mp4/.test(type) && /mp4a|opus/.test(type) && /^talk-02-line\.mp4$/.test(shared?.[0]?.name), `${type} | ${shared?.[0]?.name}`);
+  await page.screenshot({ path: `${OUT}18-talk-review.png`, fullPage: true });
+  await page.click('#rv-next');
+  await page.click('#film-clips');
+  await page.waitForSelector('.clip');
+  await page.click('#open-plan');
+  await page.waitForSelector('#plan:not([hidden])');
+  const rows = await page.$$eval('.plan-clip .plan-label', (els) => els.map((e) => e.textContent));
+  console.log('   talking plan:', rows.join(' / '));
+  ok('Edit plan puts the hook first, then each part with its b-roll', /The hook/.test(rows[0]) && /Visual hook|Cut to/.test(rows[1]) && rows.some((r) => /part 1/.test(r)), rows.slice(0, 4).join(' / '));
+  const hookItem = await page.textContent('#plan-list .tick-text >> nth=0');
+  ok('Edit plan prints your hook to put on screen', /“I paid off \$8,000 in six months\.”/.test(hookItem), hookItem);
+  await page.screenshot({ path: `${OUT}19-talk-plan.png`, fullPage: true });
+  ok('No page errors (talking)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await browser.close();
+}
+
+// ---------- 2f. Talking-to-camera checks ----------
+const talkTake = { kind: 'talk', act: 'talk', place: 'talking to camera', style: 'talk', frame: 'talk', face: true, cam: 'propped', themes: ['general'], id: 'tt1', role: 'line', videoOrder: 1, action: 'Say: “This is a test.”', say: 'This is a test.', feeling: 'warm', hold: 2, tip: '' };
+const talkProject = { id: 'ptalk', topic: 'test', script: '', shuffle: 0, mode: 'talking', lists: { broll: pick('s1', 's2', 's3'), talking: [talkTake] } };
+const talkCases = [
+  { feed: 'talk', expect: /Good shot, saved/, fixRe: /./, name: 'Talking: eyes on the top third, good size, centred = accepted' },
+  { feed: 'talk-close', expect: /Do it again/, fixRe: /^Step back a little, your face is too big\.$/, name: 'Talking: face over 45% wide = "Step back a little"' },
+  { feed: 'talk-low', expect: /Do it again/, fixRe: /eyes are too low.*a third of the way down/, name: 'Talking: eyes too low in the frame' },
+  { feed: 'talk-edge', expect: /Do it again/, fixRe: /like and comment buttons/, name: 'Talking: face under the like / comment buttons' },
+  { feed: 'talk-backlit', expect: /Do it again/, fixRe: /window behind you, turn around and face the window/, name: 'Talking: window behind you' },
+  { feed: 'talk-halfdark', expect: /Do it again/, fixRe: /Half your face is dark, turn a little toward the light/, name: 'Talking: half your face is dark' },
+  { feed: 'talk', tilt: 68, expect: /Do it again/, fixRe: /Raise the phone to eye level/, name: 'Talking: phone tilted up = "Raise the phone to eye level"' },
+  { feed: 'good', title: true, expect: /Do it again/, fixRe: /Frame looser so your title fits above your head/, name: 'Talking: title above your head needs a looser frame' },
+];
+for (const tc of talkCases) {
+  const { browser, page, errors } = await open(tc.feed, {
+    fn: ([p, tilt, title]) => {
+      localStorage.setItem('broll.project', JSON.stringify(p));
+      localStorage.setItem('broll.settings', JSON.stringify({ voice: false, titleAbove: title }));
+      // Pretend the phone's tilt sensor reports this (front camera: under 90 = pointing up).
+      if (tilt) setInterval(() => window.dispatchEvent(Object.assign(new Event('deviceorientation'), { beta: tilt, gamma: 0, alpha: 0 })), 100);
+    },
+    arg: [talkProject, tc.tilt || 0, !!tc.title],
+  });
+  await page.click('#resume-film');
+  await page.waitForFunction(() => document.querySelector('#cam-msg').hidden && document.querySelector('#video').videoWidth > 0, null, { timeout: 20000 });
+  const hint = await waitFaceReady(page).catch(() => 'no hint');
+  await page.click('#rec');
+  await page.waitForSelector('#rec-badge:not([hidden])', { timeout: 15000 });
+  await page.waitForTimeout(2800);
+  await page.click('#rec');
+  const rv = await readReview(page);
+  const pass = tc.expect.test(rv.title) && tc.fixRe.test(rv.fix);
+  ok(tc.name, pass, `hint "${hint}" -> ${rv.title}: ${rv.fix}`);
+  if (!pass) console.log('     checks:', rv.checks.join(' ; '));
+  await page.screenshot({ path: `${OUT}20-${tc.feed}${tc.tilt ? '-tilt' : ''}${tc.title ? '-title' : ''}.png` });
+  if (errors.length) ok(`No page errors (${tc.feed})`, false, errors.slice(0, 3).join(' | '));
+  await browser.close();
+}
+
 // ---------- 3. Claude coaching (Claude's server is stood in for; no real key) ----------
 const speechSpy = () => {
   window.__spoken = [];
@@ -301,6 +515,44 @@ const goodReply = () => json(200, {
   await r.browser.close();
 }
 {
+  // Talking to camera: Claude also checks the background
+  const initTalkCoach = {
+    fn: ([p, key]) => {
+      localStorage.setItem('broll.project', JSON.stringify(p));
+      localStorage.setItem('broll.settings', JSON.stringify({ voice: true }));
+      localStorage.setItem('broll.claudeKey', key);
+    },
+    arg: [talkProject, 'sk-ant-test-key'],
+  };
+  const { browser, page, errors } = await open('talk', initTalkCoach);
+  await page.evaluate(speechSpy);
+  let body = null;
+  await page.route('https://api.anthropic.com/**', async (route) => {
+    body = route.request().postDataJSON?.();
+    await route.fulfill(json(200, {
+      id: 'msg_t', type: 'message', role: 'assistant', model: 'claude-sonnet-5-5', stop_reason: 'end_turn', stop_sequence: null,
+      content: [{ type: 'text', text: JSON.stringify({ reads_as: 'warm and easy', coaching: 'You come across warm. Lean in a touch and hit the first word harder.', background_depth: 'flat wall', move_out_of_shot: ['shoes', 'laundry basket'], do_not_film: ['pajama pants: film from the waist up'] }) }],
+      usage: { input_tokens: 1500, output_tokens: 140 },
+    }));
+  });
+  await page.click('#resume-film');
+  await page.waitForFunction(() => document.querySelector('#video').videoWidth > 0, null, { timeout: 20000 });
+  await waitFaceReady(page).catch(() => {});
+  await page.click('#rec');
+  await page.waitForSelector('#rec-badge:not([hidden])', { timeout: 15000 });
+  await page.waitForTimeout(2800);
+  await page.click('#rec');
+  await page.waitForSelector('#review:not([hidden])', { timeout: 40000 });
+  await page.waitForFunction(() => !document.querySelector('#coach').classList.contains('thinking'), null, { timeout: 30000 });
+  const bgText = await page.textContent('#bg-check');
+  const props = Object.keys(body?.output_config?.format?.schema?.properties || {});
+  ok('Talking coaching asks Claude about the background', props.includes('background_depth') && props.includes('move_out_of_shot') && props.includes('do_not_film') && /background/i.test(body?.system || ''), props.join(', '));
+  ok("Claude's background check is shown: depth, clutter, what not to film", /Flat wall right behind you/.test(bgText) && /Move out of shot: shoes, laundry basket/.test(bgText) && /Pajama pants: film from the waist up/.test(bgText), bgText);
+  await page.screenshot({ path: `${OUT}21-talk-coach.png`, fullPage: true });
+  ok('No page errors (talking coaching)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await browser.close();
+}
+{
   // Settings: paste a key and check it
   const { browser, page } = await open('good');
   await page.route('https://api.anthropic.com/**', (route) => route.fulfill(
@@ -328,6 +580,52 @@ const goodReply = () => json(200, {
   ok('Settings rejects text that is not a key', /starts with sk-ant-/.test(notKey), notKey);
   ok('Settings reports a wrong key', /didn't work/.test(wrong), wrong);
   ok('Settings accepts a working key and turns coaching on', /Key works/.test(good) && pill === 'On', `${good} | ${pill}`);
+  await browser.close();
+}
+
+// ---------- 4. Safari's engine (WebKit): records H.264 MP4 ----------
+// No fake camera in WebKit, so it records a drawn picture (and a tone for
+// the talking-to-camera case) with the app's own format choice.
+{
+  const browser = await webkit.launch();
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(URL_);
+  await page.waitForSelector('#home:not([hidden])');
+  const rec = await page.evaluate(async () => {
+    const out = {};
+    for (const withAudio of [false, true]) {
+      const mime = window.brollDirector.pickMime(withAudio);
+      const c = document.createElement('canvas'); c.width = 360; c.height = 640;
+      const g = c.getContext('2d');
+      const stream = c.captureStream(30);
+      let ac;
+      if (withAudio) {
+        ac = new AudioContext();
+        const osc = ac.createOscillator(); const dest = ac.createMediaStreamDestination();
+        osc.connect(dest); osc.start();
+        stream.addTrack(dest.stream.getAudioTracks()[0]);
+      }
+      const r = new MediaRecorder(stream, { mimeType: mime });
+      const chunks = []; r.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      const done = new Promise((res) => { r.onstop = res; });
+      r.start();
+      const t0 = performance.now();
+      while (performance.now() - t0 < 1200) { g.fillStyle = `hsl(${(performance.now() / 5) % 360},60%,50%)`; g.fillRect(0, 0, 360, 640); await new Promise((res) => setTimeout(res, 33)); }
+      r.stop(); await done;
+      if (ac) ac.close();
+      const blob = new Blob(chunks, { type: r.mimeType });
+      const head = new Uint8Array(await blob.slice(0, 64 * 1024).arrayBuffer());
+      const text = String.fromCharCode(...head.slice(0, 4096));
+      out[withAudio ? 'talking' : 'broll'] = { asked: mime, got: r.mimeType, bytes: blob.size, ftyp: text.slice(4, 8), avc1: /avc1/.test(String.fromCharCode(...head)), mp4a: /mp4a/.test(String.fromCharCode(...head)) };
+    }
+    return out;
+  });
+  console.log('   WebKit recording:', JSON.stringify(rec));
+  ok("Safari's engine records b-roll as MP4 with H.264", rec.broll.ftyp === 'ftyp' && rec.broll.avc1 && rec.broll.bytes > 1000, `${rec.broll.got}, ${rec.broll.bytes} bytes`);
+  ok("Safari's engine records talking takes as MP4 with H.264 and AAC sound", rec.talking.ftyp === 'ftyp' && rec.talking.avc1 && rec.talking.mp4a && rec.talking.bytes > 1000, `${rec.talking.got}, ${rec.talking.bytes} bytes`);
+  ok('No page errors (WebKit)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await browser.close();
 }
 

@@ -3,9 +3,10 @@
     "Every shot lives in the shots list below. Add, remove or rewrite them freely.",
     "act: struggle | grind | win. Each act needs at least 3 shots.",
     "place: where in the home. Add new places to rooms so clips group by room.",
+    "style: what kind of shot it is, one of the names in styleLabels (person, body, hands, macro, overhead, pov, low, wide-side, ultrawide, visual-hook). The first shot of every list is a visual-hook shot.",
     "action: what to do, one sentence. feeling: the mood it should read as. tip: one filming tip.",
-    "hold: seconds to hold. frame: wide | medium | close | detail (detail = hands, no face).",
-    "face: true if your face should be visible. cam: propped (default) or handheld.",
+    "hold: seconds to record (5 gives room to cut 1-3 second pieces). frame: wide | medium | close | detail (detail = no face check).",
+    "face: true if your face should be visible. Most good videos are 55-75% shots without your face. cam: propped (default) or handheld.",
     "themes: topics the shot fits. general fits every video. The words that switch on each theme are in themeWords.",
     "id: any short unique name, never reuse one."
   ],
@@ -30,7 +31,19 @@
     "wide": "Wide shot",
     "medium": "Waist up",
     "close": "Close up",
-    "detail": "Hands close up"
+    "detail": "Close up, no face"
+  },
+  "styleLabels": {
+    "person": "You in the shot",
+    "body": "You, face hidden",
+    "hands": "Hands doing it",
+    "macro": "Macro close-up",
+    "overhead": "Overhead / flat lay",
+    "pov": "POV",
+    "low": "Low angle",
+    "wide-side": "Wide from the side",
+    "ultrawide": "0.5x close-up",
+    "visual-hook": "Visual hook"
   },
   "rooms": {
     "kitchen counter": "kitchen",
@@ -53,24 +66,200 @@
     "hallway mirror": "entryway"
   },
   "themeWords": {
-    "sleep": ["sleep", "tired", "exhaust", "insomnia", "bed", "nap", "rest", "night", "wake", "alarm", "morning", "drowsy", "sleepy", "burnout", "burnt out", "fatigue"],
-    "study": ["student", "study", "exam", "class", "homework", "school", "uni", "college", "revision", "grade", "lecture", "essay", "learn"],
-    "work": ["work", "job", "boss", "office", "email", "remote", "career", "meeting", "deadline", "freelanc", "business", "client", "side hustle", "9-5", "9 to 5"],
-    "fitness": ["gym", "workout", "fitness", "run", "weight", "protein", "muscle", "exercise", "yoga", "pilates", "steps", "cardio", "lift", "stretch", "body"],
-    "skin": ["skin", "acne", "serum", "glow", "makeup", "face", "spf", "moistur", "beauty", "hair", "dull", "wrinkle", "pimple", "breakout"],
-    "food": ["food", "meal", "cook", "diet", "snack", "recipe", "eat", "kitchen", "prep", "breakfast", "lunch", "dinner", "sugar", "nutrition", "supplement", "vitamin", "hungry"],
-    "money": ["money", "budget", "debt", "save", "saving", "rent", "bill", "credit", "spend", "pay", "finance", "broke", "invest", "income", "salary"],
-    "home": ["clean", "mess", "declutter", "organi", "laundry", "tidy", "room", "apartment", "chores", "dishes", "home"],
-    "mind": ["stress", "anxi", "overwhelm", "calm", "meditat", "journal", "mental", "therapy", "mood", "peace", "breath", "self care", "self-care", "mindful", "lonely"],
-    "phone": ["phone", "scroll", "screen", "social", "tiktok", "instagram", "doom", "app", "notification", "detox"],
-    "energy": ["energy", "coffee", "caffeine", "tea", "drink", "water", "hydrat", "slump", "sluggish", "drained"],
-    "focus": ["productiv", "focus", "procrastinat", "distract", "habit", "discipline", "motivat", "goal", "planner", "to-do", "todo", "adhd"]
+    "sleep": [
+      "sleep",
+      "tired",
+      "exhaust",
+      "insomnia",
+      "bed",
+      "nap",
+      "rest",
+      "night",
+      "wake",
+      "alarm",
+      "morning",
+      "drowsy",
+      "sleepy",
+      "burnout",
+      "burnt out",
+      "fatigue"
+    ],
+    "study": [
+      "student",
+      "study",
+      "exam",
+      "class",
+      "homework",
+      "school",
+      "uni",
+      "college",
+      "revision",
+      "grade",
+      "lecture",
+      "essay",
+      "learn"
+    ],
+    "work": [
+      "work",
+      "job",
+      "boss",
+      "office",
+      "email",
+      "remote",
+      "career",
+      "meeting",
+      "deadline",
+      "freelanc",
+      "business",
+      "client",
+      "side hustle",
+      "9-5",
+      "9 to 5"
+    ],
+    "fitness": [
+      "gym",
+      "workout",
+      "fitness",
+      "run",
+      "weight",
+      "protein",
+      "muscle",
+      "exercise",
+      "yoga",
+      "pilates",
+      "steps",
+      "cardio",
+      "lift",
+      "stretch",
+      "body"
+    ],
+    "skin": [
+      "skin",
+      "acne",
+      "serum",
+      "glow",
+      "makeup",
+      "face",
+      "spf",
+      "moistur",
+      "beauty",
+      "hair",
+      "dull",
+      "wrinkle",
+      "pimple",
+      "breakout"
+    ],
+    "food": [
+      "food",
+      "meal",
+      "cook",
+      "diet",
+      "snack",
+      "recipe",
+      "eat",
+      "kitchen",
+      "prep",
+      "breakfast",
+      "lunch",
+      "dinner",
+      "sugar",
+      "nutrition",
+      "supplement",
+      "vitamin",
+      "hungry"
+    ],
+    "money": [
+      "money",
+      "budget",
+      "debt",
+      "save",
+      "saving",
+      "rent",
+      "bill",
+      "credit",
+      "spend",
+      "pay",
+      "finance",
+      "broke",
+      "invest",
+      "income",
+      "salary"
+    ],
+    "home": [
+      "clean",
+      "mess",
+      "declutter",
+      "organi",
+      "laundry",
+      "tidy",
+      "room",
+      "apartment",
+      "chores",
+      "dishes",
+      "home"
+    ],
+    "mind": [
+      "stress",
+      "anxi",
+      "overwhelm",
+      "calm",
+      "meditat",
+      "journal",
+      "mental",
+      "therapy",
+      "mood",
+      "peace",
+      "breath",
+      "self care",
+      "self-care",
+      "mindful",
+      "lonely"
+    ],
+    "phone": [
+      "phone",
+      "scroll",
+      "screen",
+      "social",
+      "tiktok",
+      "instagram",
+      "doom",
+      "app",
+      "notification",
+      "detox"
+    ],
+    "energy": [
+      "energy",
+      "coffee",
+      "caffeine",
+      "tea",
+      "drink",
+      "water",
+      "hydrat",
+      "slump",
+      "sluggish",
+      "drained"
+    ],
+    "focus": [
+      "productiv",
+      "focus",
+      "procrastinat",
+      "distract",
+      "habit",
+      "discipline",
+      "motivat",
+      "goal",
+      "planner",
+      "to-do",
+      "todo",
+      "adhd"
+    ]
   },
   "shots": [
     {
       "id": "s1",
       "act": "struggle",
       "place": "kitchen counter",
+      "style": "person",
       "action": "Lean on the counter, run both hands through your hair, and let out a long breath.",
       "feeling": "heavy",
       "tip": "Prop the phone at chest height about two steps back, so the counter edge runs along the bottom of the frame.",
@@ -78,25 +267,37 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["general", "mind", "energy", "sleep", "work", "money"]
+      "themes": [
+        "general",
+        "mind",
+        "energy",
+        "sleep",
+        "work",
+        "money"
+      ]
     },
     {
       "id": "s2",
       "act": "struggle",
       "place": "bed",
+      "style": "low",
       "action": "Lie on your back staring at the ceiling, then roll over and pull the pillow over your head.",
       "feeling": "restless",
       "tip": "Stand the phone at the foot of the bed pointing up toward the pillow, with one lamp on, not the big light.",
-      "hold": 6,
+      "hold": 5,
       "frame": "wide",
       "face": false,
       "cam": "propped",
-      "themes": ["sleep", "mind"]
+      "themes": [
+        "sleep",
+        "mind"
+      ]
     },
     {
       "id": "s3",
       "act": "struggle",
       "place": "bedside table",
+      "style": "hands",
       "action": "Reach out from under the covers and fumble around for your phone without looking.",
       "feeling": "drained",
       "tip": "Put the phone low on the bedside table so your hand slides into the frame from the side.",
@@ -104,12 +305,17 @@
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["sleep", "phone", "energy"]
+      "themes": [
+        "sleep",
+        "phone",
+        "energy"
+      ]
     },
     {
       "id": "s4",
       "act": "struggle",
       "place": "desk",
+      "style": "person",
       "action": "Stare at the screen, rub your eyes with the heels of your hands, then slump back in the chair.",
       "feeling": "foggy",
       "tip": "Set the phone on the desk beside the laptop, angled at you, so the screen glow lights your face.",
@@ -117,12 +323,19 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["study", "work", "focus", "sleep", "energy"]
+      "themes": [
+        "study",
+        "work",
+        "focus",
+        "sleep",
+        "energy"
+      ]
     },
     {
       "id": "s5",
       "act": "struggle",
       "place": "desk",
+      "style": "body",
       "action": "Fold your arms on the desk and drop your head onto them, then stay completely still.",
       "feeling": "defeated",
       "tip": "Shoot from the side at desk height so we see your back curve, with a messy pile of stuff in front.",
@@ -130,12 +343,18 @@
       "frame": "medium",
       "face": false,
       "cam": "propped",
-      "themes": ["study", "work", "sleep", "focus"]
+      "themes": [
+        "study",
+        "work",
+        "sleep",
+        "focus"
+      ]
     },
     {
       "id": "s6",
       "act": "struggle",
       "place": "couch",
+      "style": "person",
       "action": "Sink low into the couch scrolling your phone, only your thumb moving, face totally blank.",
       "feeling": "stuck",
       "tip": "Prop the phone on the coffee table at couch height so the camera looks straight at you, not up your nose.",
@@ -143,12 +362,19 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["phone", "focus", "mind", "general", "sleep"]
+      "themes": [
+        "phone",
+        "focus",
+        "mind",
+        "general",
+        "sleep"
+      ]
     },
     {
       "id": "s7",
       "act": "struggle",
       "place": "kitchen table",
+      "style": "person",
       "action": "Push a half-eaten bowl away and rest your chin on your hand, staring at nothing.",
       "feeling": "flat",
       "tip": "Keep the bowl in the front of the frame and you slightly behind it, phone at table height.",
@@ -156,25 +382,37 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["food", "energy", "general", "mind"]
+      "themes": [
+        "food",
+        "energy",
+        "general",
+        "mind"
+      ]
     },
     {
       "id": "s8",
       "act": "struggle",
       "place": "fridge",
-      "action": "Open the fridge, stare inside for a few seconds, and close it with nothing in your hand.",
+      "style": "pov",
+      "action": "POV: open the fridge, look over the shelves for a few seconds, and close it with nothing in your hand.",
       "feeling": "restless",
-      "tip": "Put the phone on the counter across from the fridge so the fridge light hits your face when it opens.",
-      "hold": 6,
-      "frame": "wide",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
+      "hold": 5,
+      "frame": "detail",
       "face": false,
-      "cam": "propped",
-      "themes": ["food", "money", "energy", "fitness"]
+      "cam": "handheld",
+      "themes": [
+        "food",
+        "money",
+        "energy",
+        "fitness"
+      ]
     },
     {
       "id": "s9",
       "act": "struggle",
       "place": "bathroom mirror",
+      "style": "body",
       "action": "Lean in close to the mirror and press your fingertips under your tired eyes.",
       "feeling": "drained",
       "tip": "Film over your shoulder into the mirror, and keep the phone out of the reflection.",
@@ -182,38 +420,55 @@
       "frame": "close",
       "face": false,
       "cam": "propped",
-      "themes": ["skin", "sleep", "energy"]
+      "themes": [
+        "skin",
+        "sleep",
+        "energy"
+      ]
     },
     {
       "id": "s10",
       "act": "struggle",
       "place": "kitchen window",
+      "style": "body",
       "action": "Stand at the window holding a mug in both hands, shoulders dropped, staring out.",
       "feeling": "heavy",
       "tip": "Film from the side, not from outside looking in, so the window light falls across your face.",
-      "hold": 6,
+      "hold": 5,
       "frame": "medium",
       "face": false,
       "cam": "propped",
-      "themes": ["general", "mind", "sleep", "energy"]
+      "themes": [
+        "general",
+        "mind",
+        "sleep",
+        "energy"
+      ]
     },
     {
       "id": "s11",
       "act": "struggle",
       "place": "front door",
+      "style": "person",
       "action": "Come in the door, drop your bag on the floor, and lean back against the door with your eyes closed.",
       "feeling": "drained",
       "tip": "Prop the phone down the hallway facing the door and start rolling before you come in.",
-      "hold": 6,
+      "hold": 5,
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["work", "study", "fitness", "general"]
+      "themes": [
+        "work",
+        "study",
+        "fitness",
+        "general"
+      ]
     },
     {
       "id": "s12",
       "act": "struggle",
       "place": "living room floor",
+      "style": "person",
       "action": "Sit on the floor with your back against the couch, knees up, and tip your head back.",
       "feeling": "overwhelmed",
       "tip": "Put the phone on the floor a few steps away, tilted up slightly, so the room feels big around you.",
@@ -221,12 +476,18 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["mind", "general", "money", "home"]
+      "themes": [
+        "mind",
+        "general",
+        "money",
+        "home"
+      ]
     },
     {
       "id": "s13",
       "act": "struggle",
       "place": "desk",
+      "style": "person",
       "action": "Click through tabs fast, sigh, and shut the laptop halfway.",
       "feeling": "frustrated",
       "tip": "Shoot from beside the laptop at eye level so we see your face react, not the screen.",
@@ -234,12 +495,17 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["work", "study", "focus"]
+      "themes": [
+        "work",
+        "study",
+        "focus"
+      ]
     },
     {
       "id": "s14",
       "act": "struggle",
       "place": "kitchen counter",
+      "style": "hands",
       "action": "Pour coffee into a mug that is already full, notice, and stare at the spill.",
       "feeling": "foggy",
       "tip": "Get close to the mug and keep your hands and the pot in frame; put a towel down first.",
@@ -247,12 +513,17 @@
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["energy", "sleep", "food"]
+      "themes": [
+        "energy",
+        "sleep",
+        "food"
+      ]
     },
     {
       "id": "s15",
       "act": "struggle",
       "place": "closet",
+      "style": "person",
       "action": "Pull a top out of the closet, frown at it, and toss it on the pile behind you.",
       "feeling": "stuck",
       "tip": "Stand the phone on a shelf or chair facing the closet so we see the pile growing.",
@@ -260,12 +531,18 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["general", "skin", "home", "fitness"]
+      "themes": [
+        "general",
+        "skin",
+        "home",
+        "fitness"
+      ]
     },
     {
       "id": "s16",
       "act": "struggle",
       "place": "couch",
+      "style": "body",
       "action": "Check the time on your phone, groan, and press your face into a cushion.",
       "feeling": "restless",
       "tip": "Use just one lamp so the room feels late; keep the phone close enough to see the groan.",
@@ -273,25 +550,33 @@
       "frame": "medium",
       "face": false,
       "cam": "propped",
-      "themes": ["sleep", "phone", "mind"]
+      "themes": [
+        "sleep",
+        "phone",
+        "mind"
+      ]
     },
     {
       "id": "s17",
       "act": "struggle",
       "place": "kitchen table",
+      "style": "person",
       "action": "Spread out a few envelopes and receipts, tap numbers into your phone calculator, then put your face in your hands.",
       "feeling": "overwhelmed",
       "tip": "Shoot from across the table so the paper mess fills the bottom half of the frame.",
-      "hold": 6,
+      "hold": 5,
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["money"]
+      "themes": [
+        "money"
+      ]
     },
     {
       "id": "s18",
       "act": "struggle",
       "place": "bed",
+      "style": "person",
       "action": "Sit on the edge of the bed, look around at the mess, and let your shoulders drop.",
       "feeling": "stuck",
       "tip": "Prop the phone across the room so the mess and you are both in frame.",
@@ -299,12 +584,17 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["home", "mind", "general"]
+      "themes": [
+        "home",
+        "mind",
+        "general"
+      ]
     },
     {
       "id": "s19",
       "act": "struggle",
       "place": "kitchen counter",
+      "style": "hands",
       "action": "Crumple an empty snack wrapper in your hand and drop it on top of the others.",
       "feeling": "flat",
       "tip": "Get the phone close to the counter, level with the wrappers, so your hand comes in from above.",
@@ -312,12 +602,18 @@
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["food", "energy", "fitness", "money"]
+      "themes": [
+        "food",
+        "energy",
+        "fitness",
+        "money"
+      ]
     },
     {
       "id": "s20",
       "act": "struggle",
       "place": "bed",
+      "style": "person",
       "action": "Sit up in bed with your phone lighting your face, scrolling and blinking slowly.",
       "feeling": "wired",
       "tip": "Keep one soft lamp on behind the phone; even a dark mood needs a little light to film.",
@@ -325,12 +621,17 @@
       "frame": "close",
       "face": true,
       "cam": "propped",
-      "themes": ["sleep", "phone", "mind"]
+      "themes": [
+        "sleep",
+        "phone",
+        "mind"
+      ]
     },
     {
       "id": "s21",
       "act": "struggle",
       "place": "hallway",
+      "style": "person",
       "action": "Sit on the floor to tie your shoes, stop halfway, and lean your head back against the wall.",
       "feeling": "stuck",
       "tip": "Put the phone on the floor facing you so the shoes are big in the front of the frame.",
@@ -338,12 +639,16 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["fitness", "energy"]
+      "themes": [
+        "fitness",
+        "energy"
+      ]
     },
     {
       "id": "s22",
       "act": "struggle",
       "place": "bathroom sink",
+      "style": "person",
       "action": "Splash water on your face, then look up at the mirror, unimpressed.",
       "feeling": "drained",
       "tip": "Film from the side of the sink at shoulder height; wipe drops off the lens before you start.",
@@ -351,12 +656,17 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["skin", "sleep", "energy"]
+      "themes": [
+        "skin",
+        "sleep",
+        "energy"
+      ]
     },
     {
       "id": "s23",
       "act": "struggle",
       "place": "desk",
+      "style": "hands",
       "action": "Write a to-do list, cross nothing off, and start doodling in the corner instead.",
       "feeling": "scattered",
       "tip": "Hold the phone above the page or prop it on books looking down, so the page fills the frame.",
@@ -364,337 +674,252 @@
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["study", "focus", "work"]
+      "themes": [
+        "study",
+        "focus",
+        "work"
+      ]
     },
     {
       "id": "s24",
       "act": "struggle",
       "place": "living room window",
+      "style": "body",
       "action": "Rest your forehead against the window and watch the street, not moving.",
       "feeling": "heavy",
       "tip": "Film from slightly behind and to the side so we see your profile and the outside.",
-      "hold": 6,
-      "frame": "medium",
-      "face": false,
-      "cam": "propped",
-      "themes": ["mind", "general", "sleep"]
-    },
-    {
-      "id": "g1",
-      "act": "grind",
-      "place": "desk",
-      "action": "Open the laptop, crack your knuckles, and start typing fast.",
-      "feeling": "locked in",
-      "tip": "Set the phone at the side of the desk at eye level and fill the frame with you and the laptop.",
       "hold": 5,
       "frame": "medium",
-      "face": true,
-      "cam": "propped",
-      "themes": ["work", "study", "focus"]
-    },
-    {
-      "id": "g2",
-      "act": "grind",
-      "place": "kitchen counter",
-      "action": "Put your phone face down on the counter and slide it away from you.",
-      "feeling": "intentional",
-      "tip": "Get low and close to the counter so the phone slides out of frame.",
-      "hold": 4,
-      "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["phone", "focus", "sleep", "mind"]
+      "themes": [
+        "mind",
+        "general",
+        "sleep"
+      ]
     },
     {
-      "id": "g3",
-      "act": "grind",
-      "place": "bedside table",
-      "action": "Plug your phone in, put it face down, and set a book in its place by the bed.",
-      "feeling": "intentional",
-      "tip": "Prop the phone close to the bedside table, at table height, so your hands do the work in frame.",
-      "hold": 5,
-      "frame": "detail",
-      "face": false,
-      "cam": "propped",
-      "themes": ["sleep", "phone", "mind"]
-    },
-    {
-      "id": "g4",
-      "act": "grind",
-      "place": "kitchen counter",
-      "action": "Chop vegetables in a steady rhythm, eyes on the board.",
-      "feeling": "focused",
-      "tip": "Put the phone on a stack of books beside the board, looking down at the knife and your hands.",
-      "hold": 5,
-      "frame": "detail",
-      "face": false,
-      "cam": "propped",
-      "themes": ["food", "fitness", "money"]
-    },
-    {
-      "id": "g5",
-      "act": "grind",
-      "place": "kitchen counter",
-      "action": "Spoon food into containers lined up in a row and snap the lids on one by one.",
-      "feeling": "building",
-      "tip": "Line the containers across the frame from left to right so the row looks satisfying.",
-      "hold": 6,
-      "frame": "detail",
-      "face": false,
-      "cam": "propped",
-      "themes": ["food", "fitness", "money"]
-    },
-    {
-      "id": "g6",
-      "act": "grind",
+      "id": "s25",
+      "act": "struggle",
       "place": "desk",
-      "action": "Write in a notebook, pause, and underline something twice.",
-      "feeling": "locked in",
-      "tip": "Shoot from over your shoulder so we see the page and a bit of your face.",
+      "style": "visual-hook",
+      "action": "Reach your hand quickly toward the lens as if to grab the phone, filling the frame in the first second.",
+      "feeling": "urgent",
+      "tip": "Start moving the moment it starts recording: this is the first second of your video.",
       "hold": 5,
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["study", "focus", "work", "mind", "money"]
+      "themes": [
+        "general"
+      ]
     },
     {
-      "id": "g7",
-      "act": "grind",
-      "place": "living room floor",
-      "action": "Roll out a mat and do slow stretches, breathing out on each one.",
-      "feeling": "steady",
-      "tip": "Prop the phone low on the floor, a few big steps away, so your whole body fits in the frame.",
-      "hold": 6,
-      "frame": "wide",
-      "face": true,
-      "cam": "propped",
-      "themes": ["fitness", "mind", "sleep"]
-    },
-    {
-      "id": "g8",
-      "act": "grind",
-      "place": "living room floor",
-      "action": "Do five slow squats in the middle of the room, eyes forward.",
-      "feeling": "determined",
-      "tip": "Put the phone at hip height far enough back to fit you head to toe with space above.",
-      "hold": 6,
-      "frame": "wide",
-      "face": true,
-      "cam": "propped",
-      "themes": ["fitness"]
-    },
-    {
-      "id": "g9",
-      "act": "grind",
-      "place": "bathroom mirror",
-      "action": "Pat serum into your face with your fingertips, slow and unhurried.",
-      "feeling": "intentional",
-      "tip": "Face a window or lamp so the light hits your skin from the front, and keep the phone at face height.",
-      "hold": 5,
-      "frame": "close",
-      "face": true,
-      "cam": "propped",
-      "themes": ["skin", "sleep"]
-    },
-    {
-      "id": "g10",
-      "act": "grind",
-      "place": "kitchen sink",
-      "action": "Fill a big water bottle at the tap and take a long drink.",
-      "feeling": "steady",
-      "tip": "Film from the side so the bottle and your face are both in frame.",
-      "hold": 5,
-      "frame": "medium",
-      "face": true,
-      "cam": "propped",
-      "themes": ["fitness", "energy", "skin", "general"]
-    },
-    {
-      "id": "g11",
-      "act": "grind",
-      "place": "desk",
-      "action": "Set a timer on your phone, put it face down, and pick up your pen.",
-      "feeling": "locked in",
-      "tip": "Prop the phone close and looking down at the desk; keep the clutter out of the frame.",
-      "hold": 5,
-      "frame": "detail",
-      "face": false,
-      "cam": "propped",
-      "themes": ["focus", "study", "work", "phone"]
-    },
-    {
-      "id": "g12",
-      "act": "grind",
+      "id": "s26",
+      "act": "struggle",
       "place": "bed",
-      "action": "Dim the lamp, get under the covers, and open a book.",
-      "feeling": "calm",
-      "tip": "Keep the lamp in the shot or just out of it; warm, low light is the whole mood here.",
-      "hold": 6,
-      "frame": "medium",
-      "face": true,
-      "cam": "propped",
-      "themes": ["sleep", "phone", "mind"]
-    },
-    {
-      "id": "g13",
-      "act": "grind",
-      "place": "kitchen counter",
-      "action": "Put the coffee jar back in the cupboard and fill the kettle for tea instead.",
-      "feeling": "intentional",
-      "tip": "Set the phone back far enough that we see you, the cupboard, and the kettle in one shot.",
-      "hold": 6,
-      "frame": "medium",
-      "face": true,
-      "cam": "propped",
-      "themes": ["sleep", "energy"]
-    },
-    {
-      "id": "g14",
-      "act": "grind",
-      "place": "couch",
-      "action": "Fold laundry on the couch into neat stacks.",
-      "feeling": "steady",
-      "tip": "Shoot across the stacks so they grow toward the camera.",
-      "hold": 6,
-      "frame": "medium",
-      "face": true,
-      "cam": "propped",
-      "themes": ["home"]
-    },
-    {
-      "id": "g15",
-      "act": "grind",
-      "place": "kitchen counter",
-      "action": "Wipe down the counter in long strokes until it is clear.",
-      "feeling": "building",
-      "tip": "Shoot low along the counter so the clean surface catches the light.",
-      "hold": 5,
-      "frame": "medium",
-      "face": true,
-      "cam": "propped",
-      "themes": ["home", "food"]
-    },
-    {
-      "id": "g16",
-      "act": "grind",
-      "place": "desk",
-      "action": "Flip a flashcard, mouth the answer, and flip the next one.",
-      "feeling": "focused",
-      "tip": "Sit facing a window or lamp and put the phone at eye height so we see your concentration.",
-      "hold": 5,
-      "frame": "close",
-      "face": true,
-      "cam": "propped",
-      "themes": ["study"]
-    },
-    {
-      "id": "g17",
-      "act": "grind",
-      "place": "kitchen table",
-      "action": "Write numbers into a budget notebook and tick each line off.",
-      "feeling": "determined",
-      "tip": "Prop the phone looking down at the page; a pen and a calculator in frame help.",
+      "style": "visual-hook",
+      "action": "Your hand shoots out from under the covers straight toward the lens to grab the phone.",
+      "feeling": "groggy",
+      "tip": "Start moving the moment it starts recording: this is the first second of your video.",
       "hold": 5,
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["money"]
+      "themes": [
+        "sleep",
+        "phone",
+        "general"
+      ]
     },
     {
-      "id": "g18",
-      "act": "grind",
-      "place": "front door",
-      "action": "Grab your keys and water bottle and head out the door with purpose.",
-      "feeling": "in motion",
-      "tip": "Prop the phone down the hallway and walk away from it, out the door.",
+      "id": "s27",
+      "act": "struggle",
+      "place": "kitchen counter",
+      "style": "visual-hook",
+      "action": "Slide a mug or the product straight toward the lens until it almost touches it.",
+      "feeling": "sudden",
+      "tip": "Start moving the moment it starts recording: this is the first second of your video.",
       "hold": 5,
-      "frame": "wide",
+      "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["fitness", "work", "general"]
+      "themes": [
+        "energy",
+        "food",
+        "skin",
+        "general"
+      ]
     },
     {
-      "id": "g19",
-      "act": "grind",
+      "id": "s28",
+      "act": "struggle",
+      "place": "kitchen counter",
+      "style": "macro",
+      "action": "Close-up of a mug of coffee gone cold, a skin on top, a finger tapping the rim.",
+      "feeling": "stale",
+      "tip": "Get the phone as close as it will still focus (tap the screen to focus), with light from the side.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "energy",
+        "sleep",
+        "work"
+      ]
+    },
+    {
+      "id": "s29",
+      "act": "struggle",
+      "place": "desk",
+      "style": "overhead",
+      "action": "Overhead: a messy desk covered in papers, a cold mug, and a phone lighting up with notifications.",
+      "feeling": "buried",
+      "tip": "Hold the phone flat above, pointing straight down, or rest it across two stacks of books.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "study",
+        "work",
+        "focus",
+        "phone",
+        "general"
+      ]
+    },
+    {
+      "id": "s30",
+      "act": "struggle",
+      "place": "bed",
+      "style": "pov",
+      "action": "POV: sit on the edge of the bed and look down at your feet on the floor, not getting up.",
+      "feeling": "heavy",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "handheld",
+      "themes": [
+        "sleep",
+        "mind",
+        "energy",
+        "general"
+      ]
+    },
+    {
+      "id": "s31",
+      "act": "struggle",
       "place": "hallway",
-      "action": "Walk past the camera with a mug and a stack of books, eyes forward.",
-      "feeling": "in motion",
-      "tip": "Start rolling with the hallway empty, walk through, and let it go empty again.",
+      "style": "low",
+      "action": "Low angle from the floor: your feet drag slowly past the camera.",
+      "feeling": "dragging",
+      "tip": "Lay the phone on the floor, leaning back slightly against something, pointing along the floor.",
       "hold": 5,
       "frame": "wide",
       "face": false,
       "cam": "propped",
-      "themes": ["general", "study", "work"]
+      "themes": [
+        "general",
+        "sleep",
+        "energy",
+        "fitness"
+      ]
     },
     {
-      "id": "g20",
-      "act": "grind",
+      "id": "s32",
+      "act": "struggle",
       "place": "desk",
-      "action": "Put your headphones on, take one deep breath, and lean into the screen.",
-      "feeling": "locked in",
-      "tip": "Get close at eye level with a light in front of you; the breath should read clearly.",
+      "style": "wide-side",
+      "action": "Wide from the side: you slumped at the desk, the room dim around you.",
+      "feeling": "stuck",
+      "tip": "Prop the phone across the room, side-on to you, so we see you and the space around you.",
       "hold": 5,
-      "frame": "close",
-      "face": true,
-      "cam": "propped",
-      "themes": ["focus", "work", "study"]
-    },
-    {
-      "id": "g21",
-      "act": "grind",
-      "place": "bedside table",
-      "action": "Set an alarm on your phone and put it face down across the room.",
-      "feeling": "committed",
-      "tip": "Film from the bed so we watch you walk the phone away.",
-      "hold": 6,
       "frame": "wide",
       "face": false,
       "cam": "propped",
-      "themes": ["sleep", "phone"]
+      "themes": [
+        "study",
+        "work",
+        "focus",
+        "general"
+      ]
     },
     {
-      "id": "g22",
-      "act": "grind",
-      "place": "kitchen counter",
-      "action": "Cross off another day on a calendar or habit tracker with a marker.",
-      "feeling": "building",
-      "tip": "Get close so the row of crosses fills the frame, light coming from the side.",
-      "hold": 4,
-      "frame": "detail",
-      "face": false,
-      "cam": "propped",
-      "themes": ["general", "fitness", "sleep", "money", "study", "focus", "mind"]
-    },
-    {
-      "id": "g23",
-      "act": "grind",
-      "place": "kitchen counter",
-      "action": "Pour a scoop of oats into a bowl and level it off with a knife.",
-      "feeling": "intentional",
-      "tip": "Shoot from just above counter height so the pour looks clean.",
+      "id": "s33",
+      "act": "struggle",
+      "place": "kitchen sink",
+      "style": "ultrawide",
+      "action": "0.5x close-up of the pile of dishes in the sink.",
+      "feeling": "behind",
+      "tip": "Film this one in the Camera app at 0.5x, close to the lens, then tap \"Use a clip from my Photos\".",
       "hold": 5,
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["food", "fitness"]
+      "themes": [
+        "home",
+        "food"
+      ]
     },
     {
-      "id": "g24",
-      "act": "grind",
-      "place": "bedroom window",
-      "action": "Open the curtains first thing and stand in the light for one slow breath.",
-      "feeling": "waking up",
-      "tip": "Film from inside the room so the light pours toward the camera; tap the screen on your face to fix exposure.",
-      "hold": 6,
-      "frame": "medium",
+      "id": "s34",
+      "act": "struggle",
+      "place": "bathroom sink",
+      "style": "macro",
+      "action": "Close-up of a crowded sink edge, half-used products knocked over.",
+      "feeling": "cluttered",
+      "tip": "Get the phone as close as it will still focus (tap the screen to focus), with light from the side.",
+      "hold": 5,
+      "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["sleep", "energy", "mind"]
+      "themes": [
+        "skin",
+        "home"
+      ]
+    },
+    {
+      "id": "s35",
+      "act": "struggle",
+      "place": "kitchen table",
+      "style": "overhead",
+      "action": "Overhead: bills and receipts spread across the table, one hand pushing them around.",
+      "feeling": "overwhelmed",
+      "tip": "Hold the phone flat above, pointing straight down, or rest it across two stacks of books.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "money"
+      ]
+    },
+    {
+      "id": "s36",
+      "act": "struggle",
+      "place": "couch",
+      "style": "pov",
+      "action": "POV: your phone in your hand, thumb scrolling an endless feed.",
+      "feeling": "numb",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "handheld",
+      "themes": [
+        "phone",
+        "mind",
+        "sleep",
+        "focus"
+      ]
     },
     {
       "id": "w1",
       "act": "win",
       "place": "bedroom window",
+      "style": "person",
       "action": "Stretch your arms over your head in the morning light and smile without trying.",
       "feeling": "rested",
       "tip": "Stand beside the window, not in front of it, so the light is on your face.",
@@ -702,12 +927,17 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["sleep", "energy", "general"]
+      "themes": [
+        "sleep",
+        "energy",
+        "general"
+      ]
     },
     {
       "id": "w2",
       "act": "win",
       "place": "kitchen counter",
+      "style": "person",
       "action": "Lean on the counter with a coffee, relaxed, and laugh at something off camera.",
       "feeling": "light",
       "tip": "Same spot as a struggle shot works great here; the change in mood tells the story.",
@@ -715,12 +945,18 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["general", "energy", "food", "mind"]
+      "themes": [
+        "general",
+        "energy",
+        "food",
+        "mind"
+      ]
     },
     {
       "id": "w3",
       "act": "win",
       "place": "desk",
+      "style": "person",
       "action": "Close the laptop, lean back, and put your hands behind your head.",
       "feeling": "relieved",
       "tip": "Leave space above your head for text and keep the desk tidy now.",
@@ -728,12 +964,17 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["work", "study", "focus"]
+      "themes": [
+        "work",
+        "study",
+        "focus"
+      ]
     },
     {
       "id": "w4",
       "act": "win",
       "place": "couch",
+      "style": "person",
       "action": "Drop onto the couch, put your feet up, and breathe out with your eyes closed.",
       "feeling": "at ease",
       "tip": "Prop the phone across the room so we see the whole couch and you landing on it.",
@@ -741,12 +982,18 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["general", "mind", "home", "work"]
+      "themes": [
+        "general",
+        "mind",
+        "home",
+        "work"
+      ]
     },
     {
       "id": "w5",
       "act": "win",
       "place": "bathroom mirror",
+      "style": "person",
       "action": "Look in the mirror, touch your cheek, and give yourself a small smile.",
       "feeling": "glowing",
       "tip": "Face the light, keep the phone at eye level, and leave a little room above your head.",
@@ -754,12 +1001,16 @@
       "frame": "close",
       "face": true,
       "cam": "propped",
-      "themes": ["skin", "sleep"]
+      "themes": [
+        "skin",
+        "sleep"
+      ]
     },
     {
       "id": "w6",
       "act": "win",
       "place": "kitchen table",
+      "style": "person",
       "action": "Sit down to a plate you made, take the first bite, and nod.",
       "feeling": "proud",
       "tip": "Put the plate front and center with you just behind it; a window beside you is perfect.",
@@ -767,25 +1018,33 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["food", "fitness", "money"]
+      "themes": [
+        "food",
+        "fitness",
+        "money"
+      ]
     },
     {
       "id": "w7",
       "act": "win",
       "place": "bed",
+      "style": "person",
       "action": "Wake up before the alarm, sit up easily, and switch it off calmly.",
       "feeling": "rested",
       "tip": "Open the curtains before you film so the room looks like morning.",
-      "hold": 6,
+      "hold": 5,
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["sleep"]
+      "themes": [
+        "sleep"
+      ]
     },
     {
       "id": "w8",
       "act": "win",
       "place": "front door",
+      "style": "person",
       "action": "Walk out the door in a good outfit, then glance back with a grin.",
       "feeling": "confident",
       "tip": "Prop the phone in the hallway at chest height and walk away from it.",
@@ -793,25 +1052,37 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["general", "skin", "fitness", "work"]
+      "themes": [
+        "general",
+        "skin",
+        "fitness",
+        "work"
+      ]
     },
     {
       "id": "w9",
       "act": "win",
       "place": "desk",
+      "style": "hands",
       "action": "Tick the last box on your list with a flourish and set the pen down.",
       "feeling": "proud",
       "tip": "Get close above the page so the ticks fill the frame.",
-      "hold": 4,
+      "hold": 5,
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["study", "work", "focus", "money"]
+      "themes": [
+        "study",
+        "work",
+        "focus",
+        "money"
+      ]
     },
     {
       "id": "w10",
       "act": "win",
       "place": "kitchen window",
+      "style": "person",
       "action": "Sip from a mug by the window, eyes closed for a second, shoulders down.",
       "feeling": "calm",
       "tip": "Film from the room side so soft window light falls on your face.",
@@ -819,25 +1090,36 @@
       "frame": "close",
       "face": true,
       "cam": "propped",
-      "themes": ["mind", "sleep", "general", "energy"]
+      "themes": [
+        "mind",
+        "sleep",
+        "general",
+        "energy"
+      ]
     },
     {
       "id": "w11",
       "act": "win",
       "place": "living room floor",
+      "style": "person",
       "action": "Dance a few loose steps to music only you can hear.",
       "feeling": "free",
       "tip": "Prop the phone far enough back that your arms never leave the frame.",
-      "hold": 6,
+      "hold": 5,
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["general", "mind", "fitness"]
+      "themes": [
+        "general",
+        "mind",
+        "fitness"
+      ]
     },
     {
       "id": "w12",
       "act": "win",
       "place": "hallway mirror",
+      "style": "person",
       "action": "Check yourself out in a full-length mirror, turn side to side, and nod.",
       "feeling": "confident",
       "tip": "Film from beside the mirror, not in it, so the phone stays out of the reflection.",
@@ -845,12 +1127,17 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["fitness", "skin", "general"]
+      "themes": [
+        "fitness",
+        "skin",
+        "general"
+      ]
     },
     {
       "id": "w13",
       "act": "win",
       "place": "couch",
+      "style": "person",
       "action": "Hold your notebook or phone up to the camera with a little \"see?\" look.",
       "feeling": "proud",
       "tip": "Get close and keep what you are holding sharp; tap the screen on it before you start.",
@@ -858,12 +1145,18 @@
       "frame": "close",
       "face": true,
       "cam": "propped",
-      "themes": ["general", "study", "money", "focus"]
+      "themes": [
+        "general",
+        "study",
+        "money",
+        "focus"
+      ]
     },
     {
       "id": "w14",
       "act": "win",
       "place": "living room window",
+      "style": "person",
       "action": "Open the window, take a deep breath of fresh air, and smile.",
       "feeling": "free",
       "tip": "Film from the side so the light is on your face, not behind you.",
@@ -871,38 +1164,53 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["mind", "general", "sleep"]
+      "themes": [
+        "mind",
+        "general",
+        "sleep"
+      ]
     },
     {
       "id": "w15",
       "act": "win",
       "place": "fridge",
-      "action": "Open the fridge to a shelf of prepped meals and give a small nod.",
+      "style": "pov",
+      "action": "POV: open the fridge to a shelf of prepped meals and reach for one.",
       "feeling": "proud",
-      "tip": "Shoot over your shoulder so the full shelf is the star.",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
       "hold": 5,
-      "frame": "medium",
+      "frame": "detail",
       "face": false,
-      "cam": "propped",
-      "themes": ["food", "fitness", "money"]
+      "cam": "handheld",
+      "themes": [
+        "food",
+        "fitness",
+        "money"
+      ]
     },
     {
       "id": "w16",
       "act": "win",
       "place": "couch",
+      "style": "person",
       "action": "Curl up reading a book, phone nowhere in sight.",
       "feeling": "at ease",
       "tip": "Warm lamp light and a blanket in frame make this feel cozy.",
-      "hold": 6,
+      "hold": 5,
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["phone", "mind", "sleep"]
+      "themes": [
+        "phone",
+        "mind",
+        "sleep"
+      ]
     },
     {
       "id": "w17",
       "act": "win",
       "place": "living room floor",
+      "style": "person",
       "action": "Look around the tidy room, hands on hips, satisfied.",
       "feeling": "proud",
       "tip": "Put the phone in a corner so it sees the whole clean room.",
@@ -910,12 +1218,15 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["home"]
+      "themes": [
+        "home"
+      ]
     },
     {
       "id": "w18",
       "act": "win",
       "place": "desk",
+      "style": "person",
       "action": "Read something good on the screen, put a hand on your chest, and do a small fist pump.",
       "feeling": "relieved",
       "tip": "Let the screen light your face and keep the camera at eye level.",
@@ -923,12 +1234,17 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["study", "work", "money"]
+      "themes": [
+        "study",
+        "work",
+        "money"
+      ]
     },
     {
       "id": "w19",
       "act": "win",
       "place": "bed",
+      "style": "person",
       "action": "Fall back onto the made bed, arms out, grinning.",
       "feeling": "light",
       "tip": "Put the phone at the foot of the bed and step back into the frame before you fall.",
@@ -936,12 +1252,17 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["sleep", "home", "general"]
+      "themes": [
+        "sleep",
+        "home",
+        "general"
+      ]
     },
     {
       "id": "w20",
       "act": "win",
       "place": "bathroom mirror",
+      "style": "person",
       "action": "Turn your face slowly toward the window light and let it catch your skin.",
       "feeling": "glowing",
       "tip": "Natural light only; turn off the bathroom light for this one.",
@@ -949,25 +1270,31 @@
       "frame": "close",
       "face": true,
       "cam": "propped",
-      "themes": ["skin"]
+      "themes": [
+        "skin"
+      ]
     },
     {
       "id": "w21",
       "act": "win",
       "place": "kitchen counter",
+      "style": "hands",
       "action": "Drop a few notes into a savings jar and pat the lid.",
       "feeling": "proud",
       "tip": "Get close to the jar so the money is easy to see.",
-      "hold": 4,
+      "hold": 5,
       "frame": "detail",
       "face": false,
       "cam": "propped",
-      "themes": ["money"]
+      "themes": [
+        "money"
+      ]
     },
     {
       "id": "w22",
       "act": "win",
       "place": "desk",
+      "style": "person",
       "action": "Sit tall, type calmly with a mug beside you, and smile a little.",
       "feeling": "clear",
       "tip": "Same desk as your struggle shot, but tidy and better lit.",
@@ -975,12 +1302,18 @@
       "frame": "medium",
       "face": true,
       "cam": "propped",
-      "themes": ["focus", "work", "study", "sleep"]
+      "themes": [
+        "focus",
+        "work",
+        "study",
+        "sleep"
+      ]
     },
     {
       "id": "w23",
       "act": "win",
       "place": "living room floor",
+      "style": "person",
       "action": "Finish the last stretch, sit back on your heels, and smile at the camera.",
       "feeling": "proud",
       "tip": "Prop the phone low so your whole body and the mat are in frame.",
@@ -988,20 +1321,810 @@
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["fitness", "mind"]
+      "themes": [
+        "fitness",
+        "mind"
+      ]
     },
     {
       "id": "w24",
       "act": "win",
       "place": "front door",
+      "style": "person",
       "action": "Walk in with groceries or a gym bag, a bounce in your step, and set them down easily.",
       "feeling": "light",
       "tip": "Mirror your struggle doorway shot: same angle, opposite energy.",
-      "hold": 6,
+      "hold": 5,
       "frame": "wide",
       "face": true,
       "cam": "propped",
-      "themes": ["fitness", "food", "energy", "general"]
+      "themes": [
+        "fitness",
+        "food",
+        "energy",
+        "general"
+      ]
+    },
+    {
+      "id": "w25",
+      "act": "win",
+      "place": "kitchen window",
+      "style": "macro",
+      "action": "Macro close-up of steam rising from a fresh cup in the morning light.",
+      "feeling": "calm",
+      "tip": "Get the phone as close as it will still focus (tap the screen to focus), with light from the side.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "general",
+        "energy",
+        "mind",
+        "sleep"
+      ]
+    },
+    {
+      "id": "w26",
+      "act": "win",
+      "place": "kitchen table",
+      "style": "overhead",
+      "action": "Overhead: a full, colourful plate set down on the table.",
+      "feeling": "proud",
+      "tip": "Hold the phone flat above, pointing straight down, or rest it across two stacks of books.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "food",
+        "fitness"
+      ]
+    },
+    {
+      "id": "w27",
+      "act": "win",
+      "place": "desk",
+      "style": "overhead",
+      "action": "Overhead: a to-do list with every line ticked off, the pen laid beside it.",
+      "feeling": "done",
+      "tip": "Hold the phone flat above, pointing straight down, or rest it across two stacks of books.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "focus",
+        "study",
+        "work",
+        "general"
+      ]
+    },
+    {
+      "id": "w28",
+      "act": "win",
+      "place": "bedroom window",
+      "style": "pov",
+      "action": "POV: pull the curtains open onto a bright morning.",
+      "feeling": "fresh",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "handheld",
+      "themes": [
+        "sleep",
+        "mind",
+        "general"
+      ]
+    },
+    {
+      "id": "w29",
+      "act": "win",
+      "place": "front door",
+      "style": "low",
+      "action": "Low angle from the floor: your feet step out the door with a bounce.",
+      "feeling": "light",
+      "tip": "Lay the phone on the floor, leaning back slightly against something, pointing along the floor.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "general",
+        "fitness",
+        "energy"
+      ]
+    },
+    {
+      "id": "w30",
+      "act": "win",
+      "place": "couch",
+      "style": "wide-side",
+      "action": "Wide from the side: you stretched out on the couch, completely at ease.",
+      "feeling": "at ease",
+      "tip": "Prop the phone across the room, side-on to you, so we see you and the space around you.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "mind",
+        "sleep",
+        "general"
+      ]
+    },
+    {
+      "id": "w31",
+      "act": "win",
+      "place": "bathroom mirror",
+      "style": "ultrawide",
+      "action": "0.5x close-up: your products lined up neatly on the shelf.",
+      "feeling": "sorted",
+      "tip": "Film this one in the Camera app at 0.5x, close to the lens, then tap \"Use a clip from my Photos\".",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "skin",
+        "home"
+      ]
+    },
+    {
+      "id": "w32",
+      "act": "win",
+      "place": "kitchen counter",
+      "style": "macro",
+      "action": "Macro close-up of the savings jar, now full.",
+      "feeling": "secure",
+      "tip": "Get the phone as close as it will still focus (tap the screen to focus), with light from the side.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "money"
+      ]
+    },
+    {
+      "id": "w33",
+      "act": "win",
+      "place": "bedside table",
+      "style": "pov",
+      "action": "POV: look down at your phone showing you woke up before the alarm.",
+      "feeling": "rested",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "handheld",
+      "themes": [
+        "sleep",
+        "phone"
+      ]
+    },
+    {
+      "id": "w34",
+      "act": "win",
+      "place": "desk",
+      "style": "wide-side",
+      "action": "Wide from the side: you at a clear desk, working calmly in good light.",
+      "feeling": "in control",
+      "tip": "Prop the phone across the room, side-on to you, so we see you and the space around you.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "work",
+        "study",
+        "focus"
+      ]
+    },
+    {
+      "id": "g1",
+      "act": "grind",
+      "place": "desk",
+      "style": "person",
+      "action": "Open the laptop, crack your knuckles, and start typing fast.",
+      "feeling": "locked in",
+      "tip": "Set the phone at the side of the desk at eye level and fill the frame with you and the laptop.",
+      "hold": 5,
+      "frame": "medium",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "work",
+        "study",
+        "focus"
+      ]
+    },
+    {
+      "id": "g2",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "hands",
+      "action": "Put your phone face down on the counter and slide it away from you.",
+      "feeling": "intentional",
+      "tip": "Get low and close to the counter so the phone slides out of frame.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "phone",
+        "focus",
+        "sleep",
+        "mind"
+      ]
+    },
+    {
+      "id": "g3",
+      "act": "grind",
+      "place": "bedside table",
+      "style": "hands",
+      "action": "Plug your phone in, put it face down, and set a book in its place by the bed.",
+      "feeling": "intentional",
+      "tip": "Prop the phone close to the bedside table, at table height, so your hands do the work in frame.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "sleep",
+        "phone",
+        "mind"
+      ]
+    },
+    {
+      "id": "g4",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "hands",
+      "action": "Chop vegetables in a steady rhythm, eyes on the board.",
+      "feeling": "focused",
+      "tip": "Put the phone on a stack of books beside the board, looking down at the knife and your hands.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "food",
+        "fitness",
+        "money"
+      ]
+    },
+    {
+      "id": "g5",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "hands",
+      "action": "Spoon food into containers lined up in a row and snap the lids on one by one.",
+      "feeling": "building",
+      "tip": "Line the containers across the frame from left to right so the row looks satisfying.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "food",
+        "fitness",
+        "money"
+      ]
+    },
+    {
+      "id": "g6",
+      "act": "grind",
+      "place": "desk",
+      "style": "hands",
+      "action": "Write in a notebook, pause, and underline something twice.",
+      "feeling": "locked in",
+      "tip": "Shoot from over your shoulder so we see the page and a bit of your face.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "study",
+        "focus",
+        "work",
+        "mind",
+        "money"
+      ]
+    },
+    {
+      "id": "g7",
+      "act": "grind",
+      "place": "living room floor",
+      "style": "person",
+      "action": "Roll out a mat and do slow stretches, breathing out on each one.",
+      "feeling": "steady",
+      "tip": "Prop the phone low on the floor, a few big steps away, so your whole body fits in the frame.",
+      "hold": 5,
+      "frame": "wide",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "fitness",
+        "mind",
+        "sleep"
+      ]
+    },
+    {
+      "id": "g8",
+      "act": "grind",
+      "place": "living room floor",
+      "style": "person",
+      "action": "Do five slow squats in the middle of the room, eyes forward.",
+      "feeling": "determined",
+      "tip": "Put the phone at hip height far enough back to fit you head to toe with space above.",
+      "hold": 5,
+      "frame": "wide",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "fitness"
+      ]
+    },
+    {
+      "id": "g9",
+      "act": "grind",
+      "place": "bathroom mirror",
+      "style": "person",
+      "action": "Pat serum into your face with your fingertips, slow and unhurried.",
+      "feeling": "intentional",
+      "tip": "Face a window or lamp so the light hits your skin from the front, and keep the phone at face height.",
+      "hold": 5,
+      "frame": "close",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "skin",
+        "sleep"
+      ]
+    },
+    {
+      "id": "g10",
+      "act": "grind",
+      "place": "kitchen sink",
+      "style": "person",
+      "action": "Fill a big water bottle at the tap and take a long drink.",
+      "feeling": "steady",
+      "tip": "Film from the side so the bottle and your face are both in frame.",
+      "hold": 5,
+      "frame": "medium",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "fitness",
+        "energy",
+        "skin",
+        "general"
+      ]
+    },
+    {
+      "id": "g11",
+      "act": "grind",
+      "place": "desk",
+      "style": "hands",
+      "action": "Set a timer on your phone, put it face down, and pick up your pen.",
+      "feeling": "locked in",
+      "tip": "Prop the phone close and looking down at the desk; keep the clutter out of the frame.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "focus",
+        "study",
+        "work",
+        "phone"
+      ]
+    },
+    {
+      "id": "g12",
+      "act": "grind",
+      "place": "bed",
+      "style": "person",
+      "action": "Dim the lamp, get under the covers, and open a book.",
+      "feeling": "calm",
+      "tip": "Keep the lamp in the shot or just out of it; warm, low light is the whole mood here.",
+      "hold": 5,
+      "frame": "medium",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "sleep",
+        "phone",
+        "mind"
+      ]
+    },
+    {
+      "id": "g13",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "person",
+      "action": "Put the coffee jar back in the cupboard and fill the kettle for tea instead.",
+      "feeling": "intentional",
+      "tip": "Set the phone back far enough that we see you, the cupboard, and the kettle in one shot.",
+      "hold": 5,
+      "frame": "medium",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "sleep",
+        "energy"
+      ]
+    },
+    {
+      "id": "g14",
+      "act": "grind",
+      "place": "couch",
+      "style": "person",
+      "action": "Fold laundry on the couch into neat stacks.",
+      "feeling": "steady",
+      "tip": "Shoot across the stacks so they grow toward the camera.",
+      "hold": 5,
+      "frame": "medium",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "home"
+      ]
+    },
+    {
+      "id": "g15",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "person",
+      "action": "Wipe down the counter in long strokes until it is clear.",
+      "feeling": "building",
+      "tip": "Shoot low along the counter so the clean surface catches the light.",
+      "hold": 5,
+      "frame": "medium",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "home",
+        "food"
+      ]
+    },
+    {
+      "id": "g16",
+      "act": "grind",
+      "place": "desk",
+      "style": "person",
+      "action": "Flip a flashcard, mouth the answer, and flip the next one.",
+      "feeling": "focused",
+      "tip": "Sit facing a window or lamp and put the phone at eye height so we see your concentration.",
+      "hold": 5,
+      "frame": "close",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "study"
+      ]
+    },
+    {
+      "id": "g17",
+      "act": "grind",
+      "place": "kitchen table",
+      "style": "hands",
+      "action": "Write numbers into a budget notebook and tick each line off.",
+      "feeling": "determined",
+      "tip": "Prop the phone looking down at the page; a pen and a calculator in frame help.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "money"
+      ]
+    },
+    {
+      "id": "g18",
+      "act": "grind",
+      "place": "front door",
+      "style": "wide-side",
+      "action": "Grab your keys and water bottle and head out the door with purpose.",
+      "feeling": "in motion",
+      "tip": "Prop the phone down the hallway and walk away from it, out the door.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "fitness",
+        "work",
+        "general"
+      ]
+    },
+    {
+      "id": "g19",
+      "act": "grind",
+      "place": "hallway",
+      "style": "wide-side",
+      "action": "Walk past the camera with a mug and a stack of books, eyes forward.",
+      "feeling": "in motion",
+      "tip": "Start rolling with the hallway empty, walk through, and let it go empty again.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "general",
+        "study",
+        "work"
+      ]
+    },
+    {
+      "id": "g20",
+      "act": "grind",
+      "place": "desk",
+      "style": "person",
+      "action": "Put your headphones on, take one deep breath, and lean into the screen.",
+      "feeling": "locked in",
+      "tip": "Get close at eye level with a light in front of you; the breath should read clearly.",
+      "hold": 5,
+      "frame": "close",
+      "face": true,
+      "cam": "propped",
+      "themes": [
+        "focus",
+        "work",
+        "study"
+      ]
+    },
+    {
+      "id": "g21",
+      "act": "grind",
+      "place": "bedside table",
+      "style": "wide-side",
+      "action": "Set an alarm on your phone and put it face down across the room.",
+      "feeling": "committed",
+      "tip": "Film from the bed so we watch you walk the phone away.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "sleep",
+        "phone"
+      ]
+    },
+    {
+      "id": "g22",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "hands",
+      "action": "Cross off another day on a calendar or habit tracker with a marker.",
+      "feeling": "building",
+      "tip": "Get close so the row of crosses fills the frame, light coming from the side.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "general",
+        "fitness",
+        "sleep",
+        "money",
+        "study",
+        "focus",
+        "mind"
+      ]
+    },
+    {
+      "id": "g23",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "hands",
+      "action": "Pour a scoop of oats into a bowl and level it off with a knife.",
+      "feeling": "intentional",
+      "tip": "Shoot from just above counter height so the pour looks clean.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "food",
+        "fitness"
+      ]
+    },
+    {
+      "id": "g24",
+      "act": "grind",
+      "place": "bedroom window",
+      "style": "body",
+      "action": "Open the curtains first thing and stand in the light for one slow breath.",
+      "feeling": "waking up",
+      "tip": "Film from inside the room so the light pours toward the camera; tap the screen on your face to fix exposure.",
+      "hold": 5,
+      "frame": "medium",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "sleep",
+        "energy",
+        "mind"
+      ]
+    },
+    {
+      "id": "g25",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "macro",
+      "action": "Macro close-up of water pouring into a glass.",
+      "feeling": "fresh",
+      "tip": "Get the phone as close as it will still focus (tap the screen to focus), with light from the side.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "energy",
+        "fitness",
+        "skin",
+        "general"
+      ]
+    },
+    {
+      "id": "g26",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "overhead",
+      "action": "Overhead flat lay: ingredients laid out in neat rows, then your hands start chopping.",
+      "feeling": "organised",
+      "tip": "Hold the phone flat above, pointing straight down, or rest it across two stacks of books.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "food"
+      ]
+    },
+    {
+      "id": "g27",
+      "act": "grind",
+      "place": "desk",
+      "style": "overhead",
+      "action": "Overhead: your hand writing a plan for the week in a notebook.",
+      "feeling": "focused",
+      "tip": "Hold the phone flat above, pointing straight down, or rest it across two stacks of books.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "study",
+        "work",
+        "focus",
+        "money",
+        "general"
+      ]
+    },
+    {
+      "id": "g28",
+      "act": "grind",
+      "place": "front door",
+      "style": "pov",
+      "action": "POV: look down at your hands lacing up your trainers.",
+      "feeling": "ready",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "handheld",
+      "themes": [
+        "fitness",
+        "energy",
+        "general"
+      ]
+    },
+    {
+      "id": "g29",
+      "act": "grind",
+      "place": "living room floor",
+      "style": "low",
+      "action": "Low angle from the floor: your feet step onto the mat and plant.",
+      "feeling": "steady",
+      "tip": "Lay the phone on the floor, leaning back slightly against something, pointing along the floor.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "fitness",
+        "mind"
+      ]
+    },
+    {
+      "id": "g30",
+      "act": "grind",
+      "place": "kitchen counter",
+      "style": "wide-side",
+      "action": "Wide from the side: you cooking at the counter, steady and focused.",
+      "feeling": "in the zone",
+      "tip": "Prop the phone across the room, side-on to you, so we see you and the space around you.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "food",
+        "home"
+      ]
+    },
+    {
+      "id": "g31",
+      "act": "grind",
+      "place": "desk",
+      "style": "ultrawide",
+      "action": "0.5x close-up: your hands typing, the keyboard stretching toward the lens.",
+      "feeling": "locked in",
+      "tip": "Film this one in the Camera app at 0.5x, close to the lens, then tap \"Use a clip from my Photos\".",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "work",
+        "study",
+        "focus"
+      ]
+    },
+    {
+      "id": "g32",
+      "act": "grind",
+      "place": "bathroom sink",
+      "style": "macro",
+      "action": "Macro close-up of one drop of serum landing on your fingertip.",
+      "feeling": "careful",
+      "tip": "Get the phone as close as it will still focus (tap the screen to focus), with light from the side.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "skin"
+      ]
+    },
+    {
+      "id": "g33",
+      "act": "grind",
+      "place": "kitchen table",
+      "style": "pov",
+      "action": "POV: open your banking app and move money into savings.",
+      "feeling": "deliberate",
+      "tip": "Hold the phone at your eye level, so it sees exactly what you see.",
+      "hold": 5,
+      "frame": "detail",
+      "face": false,
+      "cam": "handheld",
+      "themes": [
+        "money",
+        "phone"
+      ]
+    },
+    {
+      "id": "g34",
+      "act": "grind",
+      "place": "living room floor",
+      "style": "wide-side",
+      "action": "Wide from the side: you holding a slow stretch on the floor, the room around you.",
+      "feeling": "patient",
+      "tip": "Prop the phone across the room, side-on to you, so we see you and the space around you.",
+      "hold": 5,
+      "frame": "wide",
+      "face": false,
+      "cam": "propped",
+      "themes": [
+        "fitness",
+        "mind",
+        "sleep"
+      ]
     }
   ]
 }

@@ -1,6 +1,11 @@
 # B-roll director
 
-A phone web app that directs you while you film b-roll for UGC videos. You type what your video is about, it plans 9 shots in 3 acts (struggle, grind, win), reads each direction out loud, records the take, checks it, and tells you in one sentence what to fix.
+A phone web app that directs you while you film a UGC video. It has two modes:
+
+- **B-roll**: it plans your shots, reads each direction out loud, records the take, checks it, and tells you in one sentence what to fix.
+- **Talking to camera**: it frames you, checks your eye line, light and phone height, and has you film the hook last, once your voice is warmed up.
+
+Once you've filmed, you save the clips to Photos and follow a tick-box edit plan in CapCut.
 
 **Open it on your iPhone:** https://evannguyen922.github.io/broll-director/
 
@@ -8,64 +13,152 @@ Your videos stay on your phone and are never uploaded. If you turn on Claude coa
 
 ## How to use it
 
-1. Open the link in Safari on your iPhone. Tip: tap Share → **Add to Home Screen** so it opens like an app (this also stops Safari from clearing your clips if you don't open it for a week).
-2. Type one line about your video, for example "student who's always tired tries a new sleep routine", and tap **Make my shot list**.
-3. Look over the 9 shots. Tap **Swap** on any shot you don't like, or **Shuffle** for a whole new list.
-4. Tap **Start filming**. Allow the camera when Safari asks (and motion, which is used to check the phone is steady).
-5. Prop the phone up and tap the red button. It reads the direction out loud, counts 3-2-1, records for the hold time, and stops on its own.
-   Or tap **Use a clip from my Photos** to pick a video you filmed with the iPhone Camera app (4K is fine): it runs the same checks and files it under the current shot, keeping the original file.
-6. It tells you **Good shot, saved** or **Do it again** with one thing to fix. You can always **Keep it anyway**.
-7. When you're done, open **My clips** (the grid icon at the top right). Tap a clip to play it, then **Save to my phone**. In the share sheet pick **Save Video** and it goes to your Photos, ready for CapCut. **Save all** saves every clip at once.
+1. Open the link in Safari on your iPhone. Tip: tap Share → **Add to Home Screen** so it opens like an app. This also stops Safari from clearing your clips if you don't open it for a week.
+2. Pick **B-roll** or **Talking to camera**. Type one line about your video, for example "paying off my credit card in 6 months".
+3. Optionally, tap **Have a script? Paste it** and paste your script, one sentence per line. The first line is your hook. Then tap **Make my shot list**.
+4. Look over the list. You can switch between the B-roll and Talking to camera lists at the top at any time; both belong to the same video. In B-roll, tap **Swap** on any shot you don't like, or **Shuffle** for a whole new list.
+5. Tap **Start filming**. Allow the camera when Safari asks. Also allow motion, which checks the phone is steady and at eye level. Talking to camera also asks for the microphone.
+6. Prop the phone up and tap the red button.
+   - **B-roll**: it reads the direction out loud, counts 3-2-1, records 5 seconds, and stops on its own.
+   - **Talking to camera**: it says "Take a deep breath", counts 3-2-1, and records until you tap stop.
+   - Or tap **From my Photos** to use a video you filmed with the iPhone Camera app (4K is fine). It runs the same checks and keeps the original file.
+7. It tells you **Good shot, saved** or **Do it again**, with one thing to fix. You can always **Keep it anyway**.
+8. Tap **Save to Photos** right there, or later from the clip grid. In the share sheet, pick **Save Video** and it goes to your Photos, ready for CapCut.
+9. Open **My clips** (the grid icon at the top right), then **Next: your edit plan**. It lists your clips in the order they go, plus a checklist to tick off while you edit.
 
-**Claude coaching (optional):** open settings (the gear at the bottom right of the filming screen, or "Claude coaching" on the home screen), paste your Claude API key, and tap **Save and check key**. After each take Claude looks at one frame and says, out loud, what the shot reads as and the one thing to change. See [Claude coaching](#claude-coaching) below for how to get a key.
+If you can't hear the voice, turn the volume up and check the silent switch.
 
-If you can't hear the voice, turn the volume up and check the silent switch. You can turn the voice off in settings (the gear).
+## Saving to your camera roll
 
-## What's built (v1)
+iPhone Safari doesn't let a web page write to Photos directly, so the app uses the share sheet, which has **Save Video**.
 
-- **Shot list from a built-in library.** 72 placeholder shots (24 per act) in `shots.json`. The app picks 9 that fit your topic: it looks for words like "tired", "budget" or "skincare", favours shots about your main theme, and mixes rooms and shot sizes (wide, waist up, close up, hands).
-- **Shot cards** with the place in your home, what to do in one sentence, the feeling it should read as, a filming tip, how long to hold, and the shot size.
-- **Filming screen** for portrait iPhone: shot card on top, camera preview (back camera, Flip for the front one), a big record button, a 3-2-1 countdown, the direction read out loud, a "Text goes here" guide at the top of the frame, and a live hint ("Step back", "Too dark", "Framing looks good") before you record.
-- **Best camera quality**: the app asks the camera for the most it can give, up to 4K at 30 frames a second, vertical. The label on the preview (for example "1080p · 30 fps") shows what the camera actually delivers, which is what gets recorded; the review and the clip player show the exact size (for example 1080 × 1920).
-- **Use a clip from my Photos**: pick a video filmed with the iPhone Camera app. The app runs the same checks on it (framing, light, steadiness by comparing frames, length, and whether it's sideways), files it under the current shot, and keeps the file exactly as it was, so saving it back gives you the original quality.
+- **Save to Photos** is on the review after every take, on every clip in the grid (the small arrow), and in the clip player.
+- **Save all to Photos** sends every clip in one share sheet. If Safari won't take them all at once, it switches to one at a time: you tap once per clip.
+- Takes are recorded as **MP4 with H.264**, which Photos accepts. Talking-to-camera takes also have AAC sound. They're recorded at the best quality the camera gives the page. A clip you picked from Photos keeps its original file, at full quality and in its own format.
+- If a phone or browser can't open the share sheet, the clip downloads instead and the app tells you it's in the **Files** app, in Downloads. Open it there, tap Share, then **Save Video**.
+
+## Guides on the camera
+
+Tap **Guides** on the filming screen to turn these on or off:
+
+- **Danger zones** (pick TikTok, Reels or Shorts): the striped areas are where the app covers your video. That's the top bar (about 8%), the like, comment and share buttons on the right (about 12%), and the captions and username at the bottom (about 20–24%). The numbers are approximate, for a 1080 × 1920 video. The app warns you if your face falls in one.
+- **Text box**: text goes in the middle of the frame.
+- **Eye line** (talking): where your eyes go, a third of the way down.
+- **Title above my head** (talking): frames you looser, with your eyes about 40% down, so a title or picture fits above your head. It warns you if the title would sit under the top bar.
+- **Thirds grid**.
+
+## Talking to camera
+
+Every warning is one sentence that says what to do, both live on the preview and after the take:
+
+- **Eye line** on the top third, or about 40% down with a title above your head.
+- **Face size**: 25–40% of the frame width. Over about 45% you hear "Step back a little, your face is too big"; under about 20%, "Come a little closer".
+- **Centred**: it warns you if you're off to one side or under the app's buttons.
+- **Phone at eye level**, from the phone's tilt sensor: "Raise the phone to eye level" if it's looking up at you.
+- **Light**:
+  - A window behind you: "turn around and face the window".
+  - Half your face dark: "turn a little toward the light".
+  - Too dark, or washed out.
+- **Steady** (it expects a tripod or a propped phone), and **at least the hold time**.
+- **Background**: with Claude coaching on, Claude checks the frame for:
+  - depth (about 6 feet from the back wall, with something behind you like a doorway, shelf or lamp) versus a flat wall;
+  - clutter to move, like bins, shoes, bags or boxes;
+  - anything you shouldn't film, like pajama pants (film from the waist up).
+
+  Without a key, the same points show as a quick checklist.
+
+The tips on every card: talk like you're FaceTiming a friend, say the first sentence fast with more energy than normal, and no pauses in it.
+
+The **hook is filmed last** on purpose. Your voice is warmed up by then, and the first 2 seconds decide whether people keep watching.
+
+- **Without a script**, you get five takes: background (under 10 seconds), your main point, your quotable line, an ending that loops back to the start, and the hook.
+- **With a script**, you get one take per line, and the first line is the hook.
+
+## B-roll
+
+- Most good videos are 55–75% shots without your face, so each list of 9 has 6 faceless shots and 3 with you in them.
+- **Shot 1 is always a visual hook**: a hand moving toward the lens in the first second.
+- Every card says what kind of shot it is:
+  - hands doing the thing;
+  - macro close-up of a texture or product;
+  - overhead / flat lay;
+  - POV (looking at your feet, opening the fridge);
+  - low angle;
+  - wide from the side;
+  - 0.5x close-up;
+  - visual hook;
+  - you in the shot.
+- Every shot records for 5 seconds, so there's room to cut 1–3 second pieces.
+- **Say it, show it**: if you paste a script, you get one cutaway per line. Each shows what the line says, and you use 0.5–1 second of it over that line.
+- 0.5x shots: web pages can't pick the iPhone's ultra-wide lens, so film those in the Camera app at 0.5x and use **From my Photos**.
+
+## Edit plan
+
+After the clip grid, **Edit plan** shows:
+
+- **Your clips, in order**:
+  - **Talking to camera**: the hook first, then each part with its b-roll cutaways under it.
+  - **B-roll only**: shot 1 to 9.
+
+  Each clip shows its file name, so you can find it in CapCut. Clips you haven't filmed yet are greyed out.
+- **A checklist** with tick boxes, saved on your phone:
+  - First frame: your hook as text in the middle, said in under 2 seconds.
+  - Something new on screen every 1–3 seconds: a cut, a picture, or a punch-in to 110–120% on a key word.
+  - Cut every 1–2 seconds where nothing happens. Cut by the transcript: flubs and dead air out, tiny breaths in.
+  - Captions in the middle, 1–3 words at a time, the same font every video, never in the danger zones.
+  - Background info under 10 seconds. The whole video under 60 seconds (if it's 1:30, cut it to 1:00).
+  - One quotable line, on screen. The end loops back into the start so people rewatch.
+  - Music low under your voice. Delete CapCut's ending clip. Export at 1080 × 1920.
+
+## What else is built
+
+- **Filming screen** for a portrait iPhone:
+  - the shot card on top;
+  - the camera preview (Flip switches cameras; the app remembers which one you use in each mode);
+  - a big record button and the 3-2-1 countdown;
+  - the direction read out loud;
+  - a live hint before you record.
+- **Best camera quality**: the app asks for up to 4K at 30 fps. The label on the preview (for example "1080p · 30 fps") shows what the camera actually gives, and the review shows the exact size and format.
 - **Take checks**, all done on the phone:
-  - **Framing**: Google's MediaPipe Face Landmarker finds your face and checks it's the right size for the shot and that there's room above your head for text.
-  - **Light**: too dark, blown out, or backlit (face much darker than the room).
-  - **Steadiness**: the phone's motion sensor; if that isn't allowed, it measures whether the whole picture is sliding around.
-  - **Length**: at least the hold time.
-- **Claude coaching** (optional, needs your own Claude API key): after each take, one still frame from the middle of the take goes to Claude (Claude Sonnet 5.5) with the shot you were going for and the phone's own check results. Claude answers like a director in one or two short spoken sentences: what the shot reads as, and the single thing to change. You see it on the review screen ("Reads as tired and stuck") and hear it read out. It's saved with the clip, so the player shows it later. If Claude can't be reached, you still hear the phone's own fix.
-- **Progress dots** for the 9 shots, coloured by act. Tap a dot to jump to that shot.
-- **Your clips**: grid of every kept clip, grouped by act and then by room, with its mood label. Tap to play, save one clip, one act, or all. Files are named like `03-struggle-desk-foggy.mp4` so they sort in order in CapCut.
-- Clips are stored in the browser's own storage on your phone (IndexedDB). Video is recorded without sound (b-roll gets music in the edit, and using the mic on iPhone makes the voice directions much quieter).
+  - framing, using Google's MediaPipe face finder;
+  - light;
+  - steadiness, from the motion sensor or by comparing frames;
+  - length.
+- **Claude coaching** (optional): after each take, Claude says out loud what the shot reads as and the one thing to change. For talking-to-camera takes, it also checks your background.
+- **Progress dots** for each list, a **clip grid** grouped by talking takes and then by act and room, and a **player**.
+- File names sort in order in CapCut, for example `talk-01-hook.mp4`, `talk-02-line.mp4` and `01-struggle-desk-urgent.mp4`.
 
 ## Swapping in your own shots
 
-All shots live in **`shots.json`**. Nothing else needs to change. Each shot looks like this:
+All b-roll shots live in **`shots.json`**. Nothing else needs to change. Each shot looks like this:
 
 ```json
 {
-  "id": "s1",
+  "id": "s27",
   "act": "struggle",
   "place": "kitchen counter",
-  "action": "Lean on the counter, run both hands through your hair, and let out a long breath.",
-  "feeling": "heavy",
-  "tip": "Prop the phone at chest height about two steps back.",
+  "style": "visual-hook",
+  "action": "Slide a mug or the product straight toward the lens until it almost touches it.",
+  "feeling": "sudden",
+  "tip": "Start moving the moment it starts recording: this is the first second of your video.",
   "hold": 5,
-  "frame": "medium",
-  "face": true,
+  "frame": "detail",
+  "face": false,
   "cam": "propped",
-  "themes": ["general", "mind", "energy"]
+  "themes": ["energy", "food", "skin", "general"]
 }
 ```
 
 - `act`: `struggle`, `grind` or `win`. Keep at least 3 per act.
-- `frame`: `wide`, `medium` (waist up), `close`, or `detail` (hands only, no face check).
-- `face`: `true` if your face should be visible. `cam`: `propped` or `handheld` (handheld gets a looser steadiness check).
-- `themes`: which topics the shot suits. `general` fits any video. The words that switch on each theme are in `themeWords` in the same file.
-- New places: add them to `rooms` so clips group under the right room.
-- Give every shot its own `id`.
+- `style`: the kind of shot. It's one of `person`, `body`, `hands`, `macro`, `overhead`, `pov`, `low`, `wide-side`, `ultrawide` or `visual-hook`, and the labels are in `styleLabels`. Keep at least one `visual-hook` in the struggle act: it becomes shot 1.
+- `frame`: `wide`, `medium` (waist up), `close`, or `detail` (no face check).
+- `face`: `true` if your face should be visible. Each act uses one face shot and two without.
+- `cam`: `propped` or `handheld` (handheld gets a looser steadiness check).
+- `hold`: seconds to record, 5 by default.
+- `themes`: which topics the shot suits. `general` fits any video. The words that switch on each theme are in `themeWords`. The script cutaways use these too, plus the words in each shot's action.
+- New places: add them to `rooms` so clips group under the right room. Give every shot its own `id`.
 
-Anything missing gets a sensible default, so a typo won't break the app. Shot lists you've already made keep their own copy of each shot, so changing the file never breaks a video you're halfway through.
+Anything missing gets a sensible default, so a typo won't break the app. Shot lists you've already made keep their own copy of each shot.
 
 ## Claude coaching
 
@@ -73,16 +166,16 @@ The app has no server of its own, so your phone talks to Claude directly using y
 
 **Getting a key (once):**
 1. Go to **console.anthropic.com** and sign in (or sign up).
-2. Click **Billing** and add a little credit ($5 lasts a long time at about half a cent per take).
+2. Click **Billing** and add a little credit. $5 lasts a long time at about half a cent per take.
 3. Optional but smart: in **Limits**, set a monthly spend limit, for example $10.
 4. Click **API keys** → **Create key**, name it "B-roll director", and copy it (it starts with `sk-ant-`).
-5. On your phone, open the app → settings → paste it → **Save and check key**. It should say "Key works".
+5. On your phone, open the app → settings (the gear) → paste it → **Save and check key**. It should say "Key works".
 
-**What it costs:** about half a cent per take (one photo plus a short reply from Claude Sonnet 5.5).
+**Privacy:** the key is stored only in this phone's browser storage, never in the code or on GitHub. Only one still frame per take is sent to Anthropic, and videos never leave your phone. Tap **Remove key** in settings to turn coaching off.
 
-**Privacy:** the key is stored only in this phone's browser storage, never in the code or on GitHub. Only one still frame per take is sent to Anthropic; videos never leave your phone. Anyone who has your unlocked phone could use the key, which is why the spend limit is worth setting. Tap **Remove key** in settings to turn coaching off.
-
-**How it's built:** `js/coach.js` loads Anthropic's official JavaScript library (pinned to version 1.4.0) and calls Claude Sonnet 5.5 at low effort for a quick reply, asking for a fixed two-field answer (`reads_as`, `coaching`). If Claude declines a frame for safety reasons, Anthropic retries it on a fallback model automatically.
+**How it's built:** `js/coach.js` uses Anthropic's official JavaScript library (version 1.4.0) to call Claude Sonnet 5.5 at low effort. It asks for a fixed answer:
+- B-roll: what the shot reads as, plus the note.
+- Talking to camera: the same, plus background depth, clutter to move, and what not to film.
 
 ## Files
 
@@ -90,12 +183,12 @@ The app has no server of its own, so your phone talks to Claude directly using y
 | --- | --- |
 | `index.html` | All the screens |
 | `styles.css` | The look |
-| `shots.json` | The shot library (edit this) |
-| `js/app.js` | Screens, camera, recording, saving |
-| `js/shots.js` | Picks 9 shots for your topic |
-| `js/checks.js` | Framing, light, steadiness and length checks |
+| `shots.json` | The b-roll shot library (edit this) |
+| `js/app.js` | Screens, camera, recording, saving, guides, edit plan |
+| `js/shots.js` | Picks the b-roll shots, script cutaways and talking takes |
+| `js/checks.js` | Framing, danger zones, eye line, eye level, light, steadiness and length checks |
 | `js/face.js` | Loads the face finder |
-| `js/coach.js` | Claude coaching (sends one frame, gets the note) |
+| `js/coach.js` | Claude coaching |
 | `js/voice.js` | Reads directions out loud, countdown beeps |
 | `js/store.js` | Saves clips on the phone |
 | `tests/` | Automatic tests (below) |
@@ -104,26 +197,50 @@ Plain HTML and JavaScript, no build step. GitHub Pages serves the folder as it i
 
 ## Tests
 
-`tests/run.sh` opens the app in a headless Chrome with a fake camera (built from a sample portrait photo) and checks the whole flow: making a list, swapping, recording, the review, progress dots, the clip grid, playback, and storage. It also feeds five takes that should get specific answers: a well-framed take is accepted, and too tight, too dark, shaky, and stopped-too-early takes each get the right fix. It feeds real video files through **Use a clip from my Photos** (a good clip, a dark one, a too-short one, a sideways one and a 4K one) and checks each verdict, that the saved file is byte-for-byte the original, and that it keeps its file type. It checks the 3-2-1 countdown, the quality label, and that the framing message and bottom buttons fit on an iPhone SE and an iPhone 14. For Claude coaching it stands in for Anthropic's server (so no key or money is needed) and checks what the app sends (one JPEG frame, the shot, the check results, the right model and settings), that the note is shown, spoken after the headline and saved with the clip, that a bad key gets a plain message while you still hear the phone's own fix, and the key settings.
+`tests/run.sh` opens the app at phone size in a headless Chrome. It uses a fake camera made from a sample portrait photo, and a fake microphone. It checks:
+
+- **B-roll**:
+  - the shot mix (6 of 9 faceless, a visual hook first, 5-second holds) and script cutaways;
+  - recording, the review, progress dots, the clip grid, playback and storage;
+  - five takes that should get specific answers.
+- **Guides**: the danger zones and text box sit where they should, switching to Shorts changes them, and they turn off and on.
+- **Save to Photos**, with a stand-in share sheet:
+  - one clip after a take;
+  - every clip at once;
+  - one at a time when Safari won't take them all;
+  - the Files-app download when there's no share sheet.
+- **Talking to camera**:
+  - the hook comes last, with the reason;
+  - the tips;
+  - the microphone is recorded;
+  - "Take a deep breath" before 3-2-1;
+  - recording runs until you stop;
+  - the background checklist.
+- **Eight framed talking takes**: good; too close; eyes too low; under the like buttons; window behind you; half your face dark; phone tilted up; no room for a title.
+- **Edit plan**: clips in order, every checklist item, and ticks that are remembered.
+- **Clips from Photos**: good, dark, too short, sideways and 4K. The saved file is checked to be the untouched original.
+- **Claude coaching**: Anthropic's server is stood in for, so no key or money is needed. That includes the background check for talking takes.
+- **Recording format in Safari's engine (WebKit)**: records MP4 with H.264, plus AAC sound for talking takes.
 
 ```bash
-cd tests && npm install && npx playwright install chromium && sh run.sh
+cd tests && npm install && npx playwright install chromium webkit && sh run.sh
 ```
 
 ## Known limits
 
-- The face finder is built for faces fairly close to the camera. In wide shots from across the room it may not spot you, so wide shots only get the framing check when it does (it never fails you for that).
-- The first time you film, the face finder downloads (about 10 MB) and takes a few seconds. Until it's ready, framing isn't checked.
-- Safari can clear website storage if you don't open the site for about a week. Adding it to your Home Screen avoids that, but save clips to Photos when you finish anyway.
-- Saving many long clips at once can be too much for the iPhone share sheet. If that happens, use **Save these** per act.
-- Live recording quality is whatever iPhone Safari lets a web page have; on many iPhones that's 1080p, not the Camera app's 4K. For full 4K, film in the Camera app and use **Use a clip from my Photos**.
-- When a website picks a video from Photos, iPhone can shrink it on the way in. The review shows the size the app actually got: if it's lower than you filmed (for example 720p instead of 4K), save the video to Files first and pick it with **Choose File**, which hands over the original.
-- 4K clips are big (a few hundred MB per minute), and they're stored inside the app until you save them, so keep b-roll clips short.
-- Without Claude coaching, the "feeling" is direction only; nothing checks whether the take reads that way.
-- Claude sees one still frame, so it can't judge movement or timing; the phone's own checks cover steadiness and length.
+- **Danger zones** are approximate and change when the apps update their layouts.
+- **Eye level** needs the motion permission. If it's not allowed, that check is skipped (the review says so).
+- **The face finder** is built for faces fairly close to the camera. In wide shots from across the room it may not spot you, so wide shots only get the framing check when it does.
+- **The first time you film**, the face finder downloads (about 10 MB) and takes a few seconds.
+- **Safari can clear website storage** if you don't open the site for about a week. Adding it to your Home Screen avoids that, but save clips to Photos when you finish anyway.
+- **Live recording quality** is whatever iPhone Safari gives a web page. On many iPhones that's 1080p, not the Camera app's 4K. For full 4K, film in the Camera app and use **From my Photos**.
+- **iPhone can shrink a video** when a website picks it from Photos. The review shows the size the app actually got. If it's lower than you filmed, save the video to Files first and pick it with **Choose File**.
+- **The microphone**: while it's on for talking-to-camera takes, the spoken directions can be quieter. That's why talking takes only say "Take a deep breath" and show the rest on screen.
+- **Claude sees one still frame**, so it can't judge your voice, movement or timing. The phone's own checks cover steadiness and length.
+- **Script cutaways** are picked from the shot library by matching words and topics. Swap any that don't fit.
 
 ## What's next
 
-- **Laptop monitor**: open the app on a laptop and see the phone's live camera, so you can check framing from across the room.
-- **Claude writes the shot list from your script**, instead of picking from the library.
+- **Claude writes the cutaways from your script**, instead of matching them from the library.
+- **Laptop monitor**: open the app on a laptop and see the phone's live camera.
 - Your own proven shots in `shots.json` in place of the placeholders.

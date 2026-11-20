@@ -67,6 +67,69 @@ const pct = (arr, p) => {
   return s[Math.min(s.length - 1, Math.floor(p * s.length))];
 };
 
+// Danger zones: where each app puts its own buttons and captions over your
+// video. Approximate, as fractions of a 1080 x 1920 frame.
+export const ZONES = {
+  tiktok: { name: 'TikTok', top: 0.08, bottom: 0.22, right: 0.12 },
+  reels: { name: 'Reels', top: 0.07, bottom: 0.2, right: 0.12 },
+  shorts: { name: 'Shorts', top: 0.08, bottom: 0.24, right: 0.13 },
+};
+export const zoneFor = (key) => ZONES[key] || ZONES.tiktok;
+
+// Is your face under the app's buttons, captions or top bar?
+export function dangerIssue(face, zone) {
+  if (!face || !zone) return null;
+  const w = face.width || face.right - face.left || 0.1;
+  if (face.right - (1 - zone.right) > w * 0.2) return { msg: `Your face is under ${zone.name}'s like and comment buttons, move toward the middle of the frame.`, short: 'Move toward the middle' };
+  if (face.bottom > 1 - zone.bottom) return { msg: `Your face is in the bottom strip where ${zone.name} puts captions, tilt the phone down a little or step back.`, short: 'Face too low' };
+  if (face.top < zone.top) return { msg: `Your head is under ${zone.name}'s top bar, tilt the phone up a little or step back.`, short: 'Head too high' };
+  return null;
+}
+
+// Talking to camera: eyes on the top third (about 40% down if a title goes
+// above your head), face 25-40% of the frame width, in the middle.
+export const EYE_LINE = 1 / 3;
+export const EYE_LINE_TITLE = 0.4;
+export function talkFramingIssue(face, { zone, titleAbove } = {}) {
+  if (!face) return null;
+  if (face.width > 0.45) return { msg: 'Step back a little, your face is too big.', short: 'Step back a little' };
+  if (face.width < 0.2) return { msg: 'Come a little closer, your face is too small.', short: 'Come a little closer' };
+  const danger = dangerIssue(face, zone);
+  if (danger) return danger;
+  const target = titleAbove ? EYE_LINE_TITLE : EYE_LINE;
+  const where = titleAbove ? 'about 40% of the way down' : 'a third of the way down';
+  if (face.eyeY > target + 0.07) return { msg: `Your eyes are too low in the frame, tilt the phone down a little so they sit ${where}.`, short: 'Tilt the phone down a little' };
+  if (face.eyeY < target - 0.07) {
+    return titleAbove
+      ? { msg: 'Frame looser so your title fits above your head, step back or tilt the phone up a little.', short: 'Leave room for your title' }
+      : { msg: `Your eyes are too high in the frame, tilt the phone up a little so they sit ${where}.`, short: 'Tilt the phone up a little' };
+  }
+  if (titleAbove && zone && face.headTop < zone.top + 0.1) return { msg: `Your title would sit under ${zone.name}'s top bar, step back a little so there's room above your head.`, short: 'Leave room for your title' };
+  if (Math.abs(face.cx - 0.5) > 0.12) return { msg: "Move to the middle of the frame, you're off to one side.", short: 'Move to the middle' };
+  return null;
+}
+
+// How far the camera points up (+) or down (-), in degrees, from the phone's
+// tilt sensor. null when the sensor isn't available.
+export function levelIssue(tilt) {
+  if (tilt == null) return null;
+  if (tilt > 12) return { msg: "Raise the phone to eye level, it's looking up at you.", short: 'Raise the phone to eye level' };
+  if (tilt < -25) return { msg: "Lower the phone to eye level, it's looking down at you.", short: 'Lower the phone to eye level' };
+  return null;
+}
+
+export function talkLightIssue({ mean, clipped, faceLuma, bgLuma, halfRatio }) {
+  // A window behind you usually blows out the background too, so this
+  // comes before "too bright": turning around fixes both.
+  if (faceLuma != null && bgLuma != null && bgLuma > 90 && faceLuma < bgLuma * 0.75) {
+    return { msg: "The background is brighter than your face. If there's a window behind you, turn around and face the window.", short: 'Turn around, face the window' };
+  }
+  if (mean < 48 || (faceLuma != null && faceLuma < 55)) return { msg: 'Too dark, turn on a lamp or face a window.', short: 'Too dark' };
+  if (clipped > 0.2 || mean > 215 || (faceLuma != null && faceLuma > 228)) return { msg: 'Too bright and washed out, step back from the light or turn a little away from it.', short: 'Too bright' };
+  if (halfRatio != null && halfRatio < 0.62) return { msg: 'Half your face is dark, turn a little toward the light.', short: 'Turn a little toward the light' };
+  return null;
+}
+
 // Framing rules per shot type. Face height and head position are fractions
 // of the frame height (0 = top, 1 = bottom).
 const FRAMING = {
@@ -87,9 +150,9 @@ export function framingIssue(shot, face) {
   if (!r || !face) return null;
   const tight = face.height > r.tight;
   const noHeadroom = face.headTop < r.minHead;
-  if (tight && noHeadroom) return { msg: 'Too tight, no room above your head for text, step back.', short: 'Step back' };
+  if (tight && noHeadroom) return { msg: 'Too tight, no room above your head, step back a little.', short: 'Step back' };
   if (tight) return { msg: TIGHT_MSG[shot.frame], short: 'Step back' };
-  if (noHeadroom) return { msg: 'No room above your head for text, tilt the phone up a little or step back.', short: 'Leave room above your head' };
+  if (noHeadroom) return { msg: 'No room above your head, tilt the phone up a little or step back.', short: 'Leave room above your head' };
   if (face.height < r.small) return { msg: "You're too small in the frame, move a step or two closer.", short: 'Come closer' };
   if (face.headTop > r.maxHead) return { msg: 'Lots of empty space above you, tilt the phone down a little.', short: 'Tilt the phone down' };
   if (face.cx < 0.15 || face.cx > 0.85) return { msg: "You're at the edge of the frame, move toward the middle.", short: 'Move to the middle' };
@@ -98,26 +161,40 @@ export function framingIssue(shot, face) {
 
 function lightIssue(meanM, clipM, faceLuma, shot) {
   if (meanM < 48) return { msg: 'Too dark, turn on a lamp or face a window.', short: 'Too dark' };
-  if (clipM > 0.2 || meanM > 215) return { msg: 'Too bright and washed out, turn so the window is beside you, not in the shot.', short: 'Too bright' };
   if (shot.face && faceLuma != null && meanM > 90 && faceLuma < meanM * 0.55) {
     return { msg: "You're backlit, turn so the light is on your face, not behind you.", short: "You're backlit" };
   }
+  if (clipM > 0.2 || meanM > 215) return { msg: 'Too bright and washed out, turn so the window is beside you, not in the shot.', short: 'Too bright' };
   return null;
 }
 
 // One quick look before recording, for the live hint on the preview.
-export function liveHint(shot, sample) {
+// ctx: { zone, titleAbove, tilt }
+export function liveHint(shot, sample, ctx = {}) {
   if (!sample) return null;
-  if (sample.mean < 48) return { short: 'Too dark', good: false };
-  if (sample.clipped > 0.25) return { short: 'Too bright', good: false };
+  const talk = shot.kind === 'talk';
+  if (sample.mean < 48) return { short: 'Too dark, turn on a lamp or face a window.', good: false };
+  // With your face in view, the light check below can tell a window behind you from plain glare.
+  const faceSeen = sample.face && sample.face.found;
+  if (sample.clipped > 0.25 && !faceSeen) return { short: 'Too bright, turn a little away from the light.', good: false };
+  if (talk) { const lv = levelIssue(ctx.tilt); if (lv) return { short: lv.msg, good: false }; }
   if (shot.frame === 'detail') return { short: 'Ready', good: true };
   if (sample.face == null) return null; // face checker not ready
   if (!sample.face.found) {
     if (!shot.face) return { short: 'Ready', good: true };
-    return shot.frame === 'wide' ? null : { short: 'Step into the frame', good: false };
+    return shot.frame === 'wide' ? null : { short: 'Step into the frame.', good: false };
   }
-  const f = framingIssue(shot, sample.face);
-  if (f) return { short: f.short, good: false };
+  if (talk) {
+    const f = talkFramingIssue(sample.face, ctx);
+    if (f) return { short: f.msg, good: false };
+    const l = talkLightIssue(sample);
+    if (l) return { short: l.msg, good: false };
+    return { short: 'Framing and light look good', good: true };
+  }
+  const f = framingIssue(shot, sample.face) || dangerIssue(sample.face, ctx.zone);
+  if (f) return { short: f.msg, good: false };
+  const l = lightIssue(sample.mean, sample.clipped, sample.faceLuma, shot);
+  if (l) return { short: l.msg, good: false };
   return { short: 'Framing looks good', good: true };
 }
 
@@ -127,7 +204,8 @@ export function liveHint(shot, sample) {
  * motion:  [{ t, rate }]  phone rotation speed in degrees per second
  * Returns { ok, title, fix, checks: [{ key, label, status: 'pass'|'fail'|'skip', note }] }
  */
-export function judgeTake({ shot, samples, motion, duration, sideways = false }) {
+export function judgeTake({ shot, samples, motion, duration, sideways = false, zone = null, titleAbove = false, tilts = [] }) {
+  const talk = shot.kind === 'talk';
   const checks = [];
   const add = (key, label, status, note, msg) => checks.push({ key, label, status, note, msg });
 
@@ -142,7 +220,7 @@ export function judgeTake({ shot, samples, motion, duration, sideways = false })
   if (sideways) {
     add('framing', 'Framing', 'fail', 'Clip is sideways', 'This clip is sideways, film it with the phone upright so it fills a TikTok or Reel.');
   } else if (shot.frame === 'detail') {
-    add('framing', 'Framing', 'skip', 'Hands shot, no face needed');
+    add('framing', 'Framing', 'skip', 'No face in this shot');
   } else if (faceChecked.length < 2) {
     add('framing', 'Framing', 'skip', "Face checker wasn't ready, so framing wasn't checked");
   } else if (faces.length / faceChecked.length < 0.5) {
@@ -151,14 +229,27 @@ export function judgeTake({ shot, samples, motion, duration, sideways = false })
     else if (shot.frame === 'wide') add('framing', 'Framing', 'skip', 'Too far away to check your face');
     else add('framing', 'Framing', 'fail', "Couldn't see your face", "I couldn't see your face, make sure you're in the frame and turned a little toward the phone.");
   } else {
-    const face = {
-      height: median(faces.map((f) => f.height)),
-      headTop: median(faces.map((f) => f.headTop)),
-      cx: median(faces.map((f) => f.cx)),
-    };
-    const issue = framingIssue(shot, face);
-    if (issue) add('framing', 'Framing', 'fail', issue.short, issue.msg);
-    else add('framing', 'Framing', 'pass', 'Good size, room above your head');
+    const m = (k) => median(faces.map((f) => f[k]).filter((v) => v != null));
+    const face = {};
+    for (const k of ['height', 'width', 'headTop', 'top', 'bottom', 'left', 'right', 'cx', 'eyeY']) face[k] = m(k);
+    if (talk) {
+      const issue = talkFramingIssue(face, { zone, titleAbove });
+      if (issue) add('framing', 'Framing', 'fail', issue.short, issue.msg);
+      else add('framing', 'Framing', 'pass', `Eyes ${Math.round(face.eyeY * 100)}% down, face ${Math.round(face.width * 100)}% wide, centred`);
+    } else {
+      const issue = framingIssue(shot, face) || dangerIssue(face, zone);
+      if (issue) add('framing', 'Framing', 'fail', issue.short, issue.msg);
+      else add('framing', 'Framing', 'pass', 'Good size, clear of the app buttons');
+    }
+  }
+
+  // ---- Phone at eye level (talking to camera, from the tilt sensor)
+  if (talk) {
+    const t = tilts.length >= 3 ? median(tilts) : null;
+    const issue = levelIssue(t);
+    if (t == null) add('level', 'Eye level', 'skip', 'Tilt sensor not allowed');
+    else if (issue) add('level', 'Eye level', 'fail', issue.short, issue.msg);
+    else add('level', 'Eye level', 'pass', 'Phone at eye level');
   }
 
   // ---- Light
@@ -166,7 +257,11 @@ export function judgeTake({ shot, samples, motion, duration, sideways = false })
     const meanM = median(samples.map((s) => s.mean));
     const clipM = median(samples.map((s) => s.clipped));
     const faceLumas = samples.map((s) => s.faceLuma).filter((v) => v != null);
-    const issue = lightIssue(meanM, clipM, faceLumas.length >= 2 ? median(faceLumas) : null, shot);
+    const faceM = faceLumas.length >= 2 ? median(faceLumas) : null;
+    const medOf = (k) => { const v = samples.map((x) => x[k]).filter((x) => x != null); return v.length >= 2 ? median(v) : null; };
+    const issue = talk
+      ? talkLightIssue({ mean: meanM, clipped: clipM, faceLuma: faceM, bgLuma: medOf('bgLuma'), halfRatio: medOf('halfRatio') })
+      : lightIssue(meanM, clipM, faceM, shot);
     if (issue) add('light', 'Light', 'fail', issue.short, issue.msg);
     else add('light', 'Light', 'pass', meanM < 75 ? 'On the dark side, but usable' : 'Well lit');
   } else {
@@ -198,7 +293,7 @@ export function judgeTake({ shot, samples, motion, duration, sideways = false })
   }
 
   // The one sentence: the most important problem first.
-  const order = ['length', 'framing', 'light', 'steady'];
+  const order = talk ? ['length', 'framing', 'level', 'light', 'steady'] : ['length', 'framing', 'light', 'steady'];
   const fails = order.map((k) => checks.find((c) => c.key === k && c.status === 'fail')).filter(Boolean);
   const ok = fails.length === 0;
   return {
@@ -210,6 +305,7 @@ export function judgeTake({ shot, samples, motion, duration, sideways = false })
 }
 
 function goodLine(shot) {
+  if (shot.kind === 'talk') return 'Framing, eye level, light, steadiness and length all look good.';
   return shot.frame === 'detail'
     ? 'Light, steadiness and length all look good.'
     : 'Framing, light, steadiness and length all look good.';

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs the app in a headless browser with a fake camera and checks every verdict.
-# Needs Node. First time: npm install && npx playwright install chromium
+# Needs Node. First time: npm install && npx playwright install chromium webkit
 set -e
 cd "$(dirname "$0")"
 mkdir -p .work/feeds .work/screens
